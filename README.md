@@ -60,7 +60,7 @@ RPiDriver is the answer: a single `curl` command turns a $35 Raspberry Pi into a
 | Feature | Details |
 |---|---|
 | **Arabic ESC/POS Printing** | Correct RTL rendering via arabic-reshaper + python-bidi |
-| **Odoo 17 & 18 Support** | Full hw_proxy protocol compatibility |
+| **Odoo 17, 18 & 19 Support** | Full hw_proxy protocol compatibility — verified against all three versions |
 | **Bilingual Interface** | Web dashboard in Arabic and English |
 | **Toledo Scale** | Mettler Toledo serial integration |
 | **Customer Display** | Bixolon BCD-1000/1100, Epson OCD300 |
@@ -206,6 +206,7 @@ baudrate = 9600
 - [x] Arabic ESC/POS printing engine
 - [x] ARM64 packaging strategy
 - [x] Bilingual web interface (AR/EN)
+- [x] Odoo 17, 18 & 19 hw_proxy protocol — verified compatible
 - [ ] `v1.0.0` — Initial public release
 - [ ] `install_pi.sh` — One-command installer
 - [ ] Debian package for Ubuntu 24.04 ARM64
@@ -246,16 +247,15 @@ In the meantime:
 
 ## 📜 License
 
-
 RPiDriver is free software: you can redistribute it and/or modify it under the terms of the **GNU Affero General Public License v3.0** as published by the Free Software Foundation.
 
-Copyright © 2026 Ibrahim Aljuhani <info@ia.sa>  
+Copyright © 2026 Ibrahim Aljuhani <info@ia.sa>
 Based on [pywebdriver](https://github.com/akretion/pywebdriver) © Akretion
 
-📄 See the full license text in [LICENSE](LICENSE).  
+📄 See the full license text in [LICENSE](LICENSE).
 💼 For commercial licensing (no AGPL obligations), contact: [info@ia.sa](mailto:info@ia.sa)
 
-
+---
 
 <div align="center">
 
