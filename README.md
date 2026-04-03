@@ -12,7 +12,7 @@
 **Smart hardware proxy for Odoo — built for Raspberry Pi**
 
 [![Status](https://img.shields.io/badge/status-coming%20soon-blue?style=flat-square&logo=github)](https://github.com/ibrahimaljuhani/rpidriver)
-[![License](https://img.shields.io/badge/license-AGPL--3.0-green?style=flat-square)](LICENSE)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Platform](https://img.shields.io/badge/platform-Raspberry%20Pi%20ARM64-red?style=flat-square&logo=raspberry-pi)](https://www.raspberrypi.org)
 [![Odoo](https://img.shields.io/badge/Odoo-17%20%7C%2018-purple?style=flat-square)](https://odoo.com)
 [![Lang](https://img.shields.io/badge/language-Arabic%20%2B%20English-orange?style=flat-square)](https://github.com/ibrahimaljuhani/rpidriver)
@@ -245,24 +245,18 @@ In the meantime:
 
 ---
 
-## License
+## 📜 License
 
-```
-RPiDriver — Smart hardware proxy for Odoo on Raspberry Pi
-Copyright (C) 2026 Ibrahim Aljuhani <info@ia.sa>
 
-Based on pywebdriver
-Copyright (C) 2014-Today Akretion <http://www.akretion.com>
+RPiDriver is free software: you can redistribute it and/or modify it under the terms of the **GNU Affero General Public License v3.0** as published by the Free Software Foundation.
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as published
-by the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-```
+Copyright © 2026 Ibrahim Aljuhani <info@ia.sa>  
+Based on [pywebdriver](https://github.com/akretion/pywebdriver) © Akretion
 
-See [LICENSE](LICENSE) for the full text.
+📄 See the full license text in [LICENSE](LICENSE).  
+💼 For commercial licensing (no AGPL obligations), contact: [info@ia.sa](mailto:info@ia.sa)
 
----
+
 
 <div align="center">
 
