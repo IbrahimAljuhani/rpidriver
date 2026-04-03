@@ -14,7 +14,7 @@
 [![Status](https://img.shields.io/badge/status-coming%20soon-blue?style=flat-square&logo=github)](https://github.com/ibrahimaljuhani/rpidriver)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Platform](https://img.shields.io/badge/platform-Raspberry%20Pi%20ARM64-red?style=flat-square&logo=raspberry-pi)](https://www.raspberrypi.org)
-[![Odoo](https://img.shields.io/badge/Odoo-17%20%7C%2018-purple?style=flat-square)](https://odoo.com)
+[![Odoo](https://img.shields.io/badge/Odoo-17%20%7C%2018%20%7C%2019-purple?style=flat-square)](https://odoo.com)
 [![Lang](https://img.shields.io/badge/language-Arabic%20%2B%20English-orange?style=flat-square)](https://github.com/ibrahimaljuhani/rpidriver)
 
 *A fork of [pywebdriver](https://github.com/akretion/pywebdriver) — rebuilt for the Arab market*
@@ -95,7 +95,6 @@ RPiDriver is the answer: a single `curl` command turns a $35 Raspberry Pi into a
 | Raspberry Pi 3B / 3B+ | ✓ Supported |
 | Raspberry Pi 4 (all RAM variants) | ✓ Supported |
 | Raspberry Pi 5 | ✓ Supported |
-| Raspberry Pi Zero 2W | ✓ Limited |
 
 ### Printers
 
