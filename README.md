@@ -11,11 +11,11 @@
 
 **Smart hardware proxy for Odoo — built for Raspberry Pi**
 
-[![Status](https://img.shields.io/badge/status-coming%20soon-blue?style=flat-square&logo=github)](https://github.com/ibrahimaljuhani/rpidriver)
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![Release](https://img.shields.io/badge/release-v1.0.0-brightgreen?style=flat-square&logo=github)](https://github.com/ibrahimaljuhani/rpidriver/releases)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg?style=flat-square)](https://www.gnu.org/licenses/agpl-3.0)
 [![Platform](https://img.shields.io/badge/platform-Raspberry%20Pi%20ARM64-red?style=flat-square&logo=raspberry-pi)](https://www.raspberrypi.org)
 [![Odoo](https://img.shields.io/badge/Odoo-17%20%7C%2018%20%7C%2019-purple?style=flat-square)](https://odoo.com)
-[![Lang](https://img.shields.io/badge/language-Arabic%20%2B%20English-orange?style=flat-square)](https://github.com/ibrahimaljuhani/rpidriver)
+[![Lang](https://img.shields.io/badge/interface-Arabic%20%2B%20English-orange?style=flat-square)](https://github.com/ibrahimaljuhani/rpidriver)
 
 *A fork of [pywebdriver](https://github.com/akretion/pywebdriver) — rebuilt for the Arab market*
 
@@ -23,15 +23,11 @@
 
 ---
 
-> **⚠️ Under Development** — RPiDriver is currently in active development and not yet released. Star the repo to get notified when v1.0.0 drops.
-
----
-
 ## What is RPiDriver?
 
-RPiDriver is a lightweight, open-source hardware proxy that connects **Odoo POS** to physical hardware through a **Raspberry Pi**. It acts as a local server that bridges your Odoo instance with printers, scales, and customer displays — with **full Arabic language support** built in from day one.
+RPiDriver is a lightweight, open-source hardware proxy that connects **Odoo POS** to physical hardware through a **Raspberry Pi**. It acts as a local server that bridges your Odoo instance with receipt printers, scales, and customer displays — with **full Arabic language support** built in from day one.
 
-Most existing solutions are either expensive, lack Arabic support, or simply don't run reliably on ARM hardware. RPiDriver fixes all three.
+Most existing solutions are either expensive, lack Arabic support, or don't run reliably on ARM hardware. RPiDriver fixes all three.
 
 ```bash
 # Install with one command
@@ -59,15 +55,18 @@ RPiDriver is the answer: a single `curl` command turns a $35 Raspberry Pi into a
 
 | Feature | Details |
 |---|---|
-| **Arabic ESC/POS Printing** | Correct RTL rendering via arabic-reshaper + python-bidi |
-| **Odoo 17, 18 & 19 Support** | Full hw_proxy protocol compatibility — verified against all three versions |
-| **Bilingual Interface** | Web dashboard in Arabic and English |
-| **Toledo Scale** | Mettler Toledo serial integration |
-| **Customer Display** | Bixolon BCD-1000/1100, Epson OCD300 |
-| **CUPS Network Printing** | Shared printers over the network |
-| **Automatic HTTPS** | Self-signed SSL via mkcert — no browser warnings |
-| **ARM64 Native** | Built for Raspberry Pi 3B+, 4, and 5 |
-| **systemd Service** | Auto-start on boot, crash recovery |
+| **Arabic ESC/POS Printing** | Correct RTL rendering via arabic-reshaper + python-bidi + Pillow bitmap engine |
+| **Odoo 17, 18 & 19** | Full hw_proxy protocol — verified against all three versions |
+| **Image Receipt Printing** | Odoo 17+ sends base64 JPEG receipts — rendered and printed natively |
+| **Cash Drawer** | ESC p pulse command triggered from Odoo POS |
+| **Bilingual Dashboard** | Web interface in Arabic and English with RTL layout |
+| **Serial Scale Support** | Mettler Toledo 8217 (7E1) and Adam Equipment (8N1) protocols |
+| **Customer Display** | Bixolon BCD-1000/1100, Epson OCD300 — 2×20 LCD over USB-CDC |
+| **CUPS Network Printing** | Send jobs to shared CUPS printers over the network via IPP |
+| **Plugin Architecture** | Enable only the drivers you need via a single config line |
+| **ARM64 Native** | Built and tested on Raspberry Pi 3B+, 4, and 5 |
+| **systemd Service** | Auto-start on boot, crash recovery, secret key management |
+| **udev Rules** | Automatic USB and serial port permissions — no `sudo` after setup |
 
 ### Pro — Coming Soon
 
@@ -75,9 +74,9 @@ RPiDriver is the answer: a single `curl` command turns a $35 Raspberry Pi into a
 |---|---|
 | **Web Config Panel** | Edit all settings from the browser — no SSH needed |
 | **OTA Updates** | One-click updates from the dashboard |
-| **Watchdog + Alerts** | Telegram notifications on failures |
+| **Watchdog + Alerts** | Telegram notifications on hardware failures |
 | **Visual Event Log** | Real-time status and error history |
-| **SSL from ia.sa/rpidriver/api** | Signed certificate, zero setup |
+| **SSL Certificate** | Signed certificate from ia.sa — zero setup |
 | **Config Backup** | Automated settings backup and restore |
 | **Email Support** | 48-hour response guarantee |
 | **Commercial License** | No AGPL obligations |
@@ -96,24 +95,28 @@ RPiDriver is the answer: a single `curl` command turns a $35 Raspberry Pi into a
 | Raspberry Pi 4 (all RAM variants) | ✓ Supported |
 | Raspberry Pi 5 | ✓ Supported |
 
-### Printers
+### Receipt Printers
 
-| Brand | Connection |
-|---|---|
-| Epson TM series (T20, T82, T88...) | USB, Serial, Network |
-| Star Micronics TSP series | USB, Serial |
-| Xprinter XP series | USB, Network |
-| Any ESC/POS compatible printer | USB, Serial |
+| Brand | Models | Connection |
+|---|---|---|
+| Epson TM series | T20, T82, T88 | USB |
+| Star Micronics | TSP series | USB |
+| Any ESC/POS printer | Generic | USB |
+| Network printers | via CUPS/IPP | Network |
 
-### Other Devices
+### Scales
 
-| Device | Protocol |
-|---|---|
-| Mettler Toledo scales | Serial (RS-232) |
-| Bixolon customer displays | USB, Serial |
-| Epson OCD300 | USB |
-| Adyen payment terminals | Network |
-| Telium / Ingenico terminals | Serial |
+| Brand | Protocol | Serial Parameters |
+|---|---|---|
+| Mettler Toledo | Toledo 8217 | 9600 baud, 7E1 |
+| Adam Equipment | Adam | 4800 baud, 8N1 |
+
+### Customer Displays
+
+| Brand | Model | Connection |
+|---|---|---|
+| Bixolon | BCD-1000, BCD-1100 | USB-CDC (ttyACM) |
+| Epson | OCD300 | RS-232 |
 
 ---
 
@@ -123,7 +126,7 @@ RPiDriver is the answer: a single `curl` command turns a $35 Raspberry Pi into a
 ┌─────────────────────────────────────────────┐
 │              Odoo POS (browser)             │
 └──────────────────┬──────────────────────────┘
-                   │  hw_proxy / JSON-RPC
+                   │  hw_proxy / JSON-RPC 2.0
                    ▼
 ┌─────────────────────────────────────────────┐
 │         RPiDriver  (Raspberry Pi)           │
@@ -135,30 +138,49 @@ RPiDriver is the answer: a single `curl` command turns a $35 Raspberry Pi into a
 └───────┼──────────────┼──────────────┼───────┘
         │              │              │
         ▼              ▼              ▼
-   ESC/POS          Toledo         Customer
-   Printer           Scale         Display
+   ESC/POS          Toledo /       Customer
+   Printer          Adam Scale     Display
 ```
 
-RPiDriver exposes a local Flask server on port `8069`. Odoo connects to it exactly like it would connect to an official IoT Box — no Odoo module required.
+RPiDriver exposes a local Flask server on port `8069`. Odoo connects to it exactly like it would connect to an official IoT Box — no Odoo module required, no cloud dependency.
+
+### hw_proxy Endpoints
+
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `/hw_proxy/hello` | GET | Connectivity probe |
+| `/hw_proxy/handshake` | POST | POS startup handshake |
+| `/hw_proxy/status_json` | POST | Driver status for all devices |
+| `/hw_proxy/scale_read` | POST | Read current weight |
+| `/hw_proxy/default_printer_action` | POST | Print receipt / open cashbox (Odoo 17–19) |
+| `/hw_proxy/print_receipt` | POST | Legacy print endpoint (Odoo 13–16) |
 
 ---
 
 ## Quick Start
 
-> **Note:** RPiDriver is not yet released. The commands below reflect the planned installation flow.
+### One-Command Install (Recommended)
 
 ```bash
-# 1. Install — auto-detects your Pi model and OS
+# Run on your Raspberry Pi
 curl -fsSL https://ia.sa/rpidriver/install | sudo bash
-
-# 2. Open the dashboard
-# Navigate to http://[your-pi-ip]:8069
-
-# 3. Connect Odoo
-# POS Settings → IoT Box → Add your Pi's IP address
 ```
 
-### Manual Installation (development)
+The installer will:
+1. Install system dependencies (libusb, CUPS, Noto Arabic fonts)
+2. Create a dedicated `rpidriver` system user with correct permissions
+3. Install udev rules for USB printers and serial devices
+4. Generate a secure Flask secret key
+5. Register and enable the systemd service
+
+```bash
+# After install:
+sudo nano /etc/rpidriver/config.ini   # edit your hardware config
+sudo systemctl start rpidriver
+# Open http://[your-pi-ip]:8069
+```
+
+### Development Install
 
 ```bash
 git clone https://github.com/ibrahimaljuhani/rpidriver.git
@@ -166,49 +188,79 @@ cd rpidriver
 
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -e ".[dev]"
 
 cp config/config.ini.tmpl config/config.ini
 # Edit config.ini to match your hardware
 
-python3 -m rpidriver
+export RPIDRIVER_SECRET="your-dev-secret"
+rpidriver
 ```
 
 ---
 
 ## Configuration
 
+Copy `config/config.ini.tmpl` to `/etc/rpidriver/config.ini` and edit to match your hardware. The Flask secret key is set via the environment variable `RPIDRIVER_SECRET` (generated automatically by the installer).
+
 ```ini
-[flask]
-host         = 0.0.0.0
-port         = 8069
-cors_origins = *
-
 [rpidriver]
-locale  = ar_SA     # ar_SA | en_US
-drivers = escpos_driver,scale_driver,display_driver,cups_driver
+host    = 0.0.0.0
+port    = 8069
+debug   = false
+# Enable only the drivers you need:
+drivers = escpos_driver, scale_driver
 
-[escpos]
-printer_type = usb      # usb | serial | network
-usb_vendor   = 0x04b8   # Epson vendor ID
-usb_product  = 0x0e15
 
-[scale]
+[escpos_driver]
+# Paper width in pixels: 576 = 80mm @ 203dpi | 384 = 58mm @ 203dpi
+paper_width = 576
+
+# Arabic font — required for correct RTL receipt printing
+# arabic_font_path = /usr/share/fonts/truetype/noto/NotoSansArabic-Regular.ttf
+
+# Message printed at the bottom of every receipt
+# thank_you_message = Thank you! — شكراً لزيارتكم
+
+# USB vendor/product IDs (leave blank to auto-detect)
+# usb_vendor  = 04b8
+# usb_product = 0e15
+
+
+[scale_driver]
 port     = /dev/ttyUSB0
+protocol = toledo8217   # toledo8217 | adam
+timeout  = 1.0
+# baudrate = 9600       # override only if your scale is non-standard
+
+
+[display_driver]
+port     = /dev/ttyACM0
 baudrate = 9600
+
+
+[cups_driver]
+cups_host    = localhost
+cups_port    = 631
+printer_name = Receipt_Printer
 ```
 
 ---
 
 ## Roadmap
 
-- [x] Architecture design and research
-- [x] Arabic ESC/POS printing engine
-- [x] ARM64 packaging strategy
-- [x] Bilingual web interface (AR/EN)
+- [x] Arabic ESC/POS printing engine (reshape → bidi → bitmap → raster)
 - [x] Odoo 17, 18 & 19 hw_proxy protocol — verified compatible
-- [ ] `v1.0.0` — Initial public release
-- [ ] `install_pi.sh` — One-command installer
+- [x] Image receipt printing (base64 JPEG from Odoo 17+ canvas)
+- [x] Cash drawer support
+- [x] Serial scale drivers — Toledo 8217 and Adam Equipment
+- [x] Customer display driver — Bixolon / Epson
+- [x] CUPS network printing via IPP
+- [x] Bilingual web dashboard (AR / EN)
+- [x] One-command installer (`install_pi.sh`)
+- [x] systemd service with secret key management
+- [x] udev rules for all device types
+- [x] `v1.0.0` — Initial public release
 - [ ] Debian package for Ubuntu 24.04 ARM64
 - [ ] RPiDriver Pro — Web config panel
 - [ ] RPiDriver Pro — OTA updates
@@ -235,25 +287,25 @@ All modifications are released under the same AGPL-3.0 license.
 
 ## Contributing
 
-RPiDriver is not yet open for external contributions — the codebase is being prepared for initial release. Once v1.0.0 is out, contributions will be welcome.
+Contributions are welcome. To get started:
 
-In the meantime:
+1. Fork the repository and create a feature branch
+2. Run the test suite: `pytest tests/ -v`
+3. Open a pull request with a clear description of your change
 
-- ⭐ Star the repo to stay updated
-- 🐛 Open an issue to report bugs or suggest features
-- 📧 Email [info@ia.sa](mailto:info@ia.sa) for Pro or partnership inquiries
+Please open an issue first for significant changes so we can discuss the approach.
 
 ---
 
-## 📜 License
+## License
 
 RPiDriver is free software: you can redistribute it and/or modify it under the terms of the **GNU Affero General Public License v3.0** as published by the Free Software Foundation.
 
-Copyright © 2026 Ibrahim Aljuhani <info@ia.sa>
+Copyright © 2026 Ibrahim Aljuhani · [info@ia.sa](mailto:info@ia.sa)  
 Based on [pywebdriver](https://github.com/akretion/pywebdriver) © Akretion
 
-📄 See the full license text in [LICENSE](LICENSE).
-💼 For commercial licensing (no AGPL obligations), contact: [info@ia.sa](mailto:info@ia.sa)
+See the full license text in [LICENSE](LICENSE).  
+For commercial licensing (no AGPL obligations), contact [info@ia.sa](mailto:info@ia.sa).
 
 ---
 
