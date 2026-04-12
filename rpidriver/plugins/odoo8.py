@@ -21,6 +21,15 @@ def _jsonrpc_result(result, req_id=None):
     return jsonify({"jsonrpc": "2.0", "id": req_id, "result": result})
 
 
+def _jsonrpc_error(message: str, code: int = -32000, req_id=None):
+    """Wrap an error in a JSON-RPC 2.0 error envelope."""
+    return jsonify({
+        "jsonrpc": "2.0",
+        "id": req_id,
+        "error": {"code": code, "message": message},
+    })
+
+
 def _get_jsonrpc_id():
     data = request.get_json(force=True, silent=True)
     return data.get("id") if data else None
@@ -85,7 +94,7 @@ def scale_read():
     drivers = _get_drivers()
     scale = drivers.get("scale_driver")
     if scale is None:
-        return _jsonrpc_result({"weight": 0.0, "unit": "kg", "status": "no_scale"}, _get_jsonrpc_id())
+        return _jsonrpc_error("No scale driver loaded", req_id=_get_jsonrpc_id())
     try:
         reading = scale.read_weight()
         return _jsonrpc_result(reading, _get_jsonrpc_id())
@@ -104,13 +113,14 @@ def print_receipt():
     params = data.get("params", {})
     receipt = params.get("receipt", "")
 
+    req_id = data.get("id")
     drivers = _get_drivers()
-    printer = drivers.get("escpos_driver")
+    printer = drivers.get("escpos_driver") or drivers.get("cups_driver")
     if printer is None:
-        return _jsonrpc_result(False, data.get("id"))
+        return _jsonrpc_error("No printer driver loaded", req_id=req_id)
     try:
         printer.print_receipt(receipt)
-        return _jsonrpc_result(True, data.get("id"))
+        return _jsonrpc_result(True, req_id)
     except Exception as exc:
         logger.exception("print_receipt failed: %s", exc)
-        return _jsonrpc_result(False, data.get("id"))
+        return _jsonrpc_error(str(exc), req_id=req_id)

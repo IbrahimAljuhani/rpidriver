@@ -13,6 +13,7 @@ Usage:
     escpos_bytes = render_arabic_line("مرحبا بكم", width_px=576)
 """
 
+import functools
 import logging
 import struct
 
@@ -29,12 +30,21 @@ try:
     from PIL import Image, ImageDraw, ImageFont
 
     _ARABIC_SUPPORT = True
+
+    @functools.lru_cache(maxsize=8)
+    def _load_font(path: str, size: int):
+        """Load a TrueType font; cached so the file is read only once per (path, size) pair."""
+        return ImageFont.truetype(path, size)
+
 except ImportError:
     _ARABIC_SUPPORT = False
     logger.warning(
         "Arabic printing dependencies not installed. "
         "Run: pip install arabic-reshaper python-bidi Pillow"
     )
+
+    def _load_font(path: str, size: int):  # type: ignore[misc]
+        raise RuntimeError("arabic-reshaper / python-bidi / Pillow not installed.")
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
@@ -89,7 +99,7 @@ def render_arabic_line(
 
     # ── Load font ─────────────────────────────────────────────────────────
     if font_path:
-        font = ImageFont.truetype(font_path, font_size)
+        font = _load_font(font_path, font_size)
     else:
         if not _font_warning_issued:
             logger.warning(

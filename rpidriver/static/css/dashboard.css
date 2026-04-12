@@ -1,0 +1,139 @@
+/* RPiDriver Dashboard Styles */
+
+:root {
+  --primary: #1a7f64;
+  --bg: #f5f7fa;
+  --surface: #ffffff;
+  --text: #1c1c1e;
+  --muted: #6b7280;
+  --danger: #dc2626;
+  --success: #16a34a;
+  --warning: #d97706;
+  --radius: 8px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Cairo', 'Noto Sans Arabic', 'Noto Sans', 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* ── Navbar ── */
+nav {
+  background: var(--primary);
+  color: #fff;
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+nav .brand {
+  font-size: 1.25rem;
+  font-weight: 700;
+  text-decoration: none;
+  color: #fff;
+}
+nav ul {
+  list-style: none;
+  display: flex;
+  gap: 1.25rem;
+}
+nav ul a {
+  color: rgba(255,255,255,0.85);
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: color 0.15s;
+}
+nav ul a:hover { color: #fff; }
+
+.lang-toggle {
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.3);
+  color: #fff;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius);
+  text-decoration: none;
+  font-size: 0.85rem;
+}
+.lang-toggle:hover { background: rgba(255,255,255,0.25); }
+
+/* ── Layout ── */
+main {
+  max-width: 960px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+/* ── Card ── */
+.card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  padding: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+.card h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: var(--primary);
+}
+
+/* ── Status badges ── */
+.badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.badge-connected    { background: #dcfce7; color: var(--success); }
+.badge-error        { background: #fee2e2; color: var(--danger); }
+.badge-disconnected { background: #f3f4f6; color: var(--muted); }
+.badge-warning      { background: #fef3c7; color: var(--warning); }
+
+/* ── Table ── */
+table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+th, td { padding: 0.6rem 0.8rem; text-align: start; border-bottom: 1px solid #e5e7eb; }
+th { font-weight: 600; color: var(--muted); font-size: 0.8rem; text-transform: uppercase; }
+
+/* ── Footer ── */
+footer {
+  text-align: center;
+  padding: 1.5rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+footer a { color: var(--primary); text-decoration: none; }
+
+/* ── Quick-link grid (index.html) ── */
+.quick-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.quick-card {
+  text-decoration: none;
+  display: block;
+}
+.quick-card .card {
+  text-align: center;
+  cursor: pointer;
+  transition: box-shadow 0.2s;
+}
+.quick-card .card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+.quick-icon  { font-size: 2rem; margin-bottom: 0.5rem; }
+.quick-label { font-weight: 600; color: var(--text); }
+.quick-desc  { color: var(--muted); font-size: 0.85rem; }
+
+/* ── Responsive nav ── */
+@media (max-width: 640px) {
+  nav { flex-wrap: wrap; gap: 0.5rem; padding: 0.75rem 1rem; }
+  nav ul { flex-wrap: wrap; gap: 0.5rem 1rem; width: 100%; }
+  .lang-toggle { margin-top: 0.25rem; }
+}

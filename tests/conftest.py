@@ -33,9 +33,13 @@ def config_file():
 # ── Flask test client fixture ─────────────────────────────────────────────────
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def app(config_file):
-    """Create the Flask application with a minimal test config."""
+    """Create the Flask application with a minimal test config.
+
+    Function-scoped so each test gets a fresh app instance and drivers
+    registry, preventing state leakage between tests.
+    """
     os.environ["RPIDRIVER_CONFIG"] = config_file
     from rpidriver import create_app
 

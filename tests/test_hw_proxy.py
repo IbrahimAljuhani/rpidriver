@@ -82,7 +82,7 @@ def test_scale_read_no_driver(client):
 
 
 def test_print_receipt_no_driver(client):
-    """print_receipt with no driver must return False without crashing."""
+    """print_receipt with no driver must return a JSON-RPC error without crashing."""
     payload = {
         "jsonrpc": "2.0",
         "method": "call",
@@ -96,4 +96,6 @@ def test_print_receipt_no_driver(client):
     )
     assert resp.status_code == 200
     body = resp.get_json()
-    assert body["result"] is False
+    assert body["jsonrpc"] == "2.0"
+    assert "error" in body
+    assert "No printer driver loaded" in body["error"]["message"]

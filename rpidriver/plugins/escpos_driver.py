@@ -42,7 +42,11 @@ LF = b"\n"
 
 # ── Receipt renderer ──────────────────────────────────────────────────────────
 
-def _format_receipt(receipt: dict, cols: int = 42) -> list[str]:
+def _format_receipt(
+    receipt: dict,
+    cols: int = 42,
+    thank_you: str = "Thank you! — شكراً لزيارتكم",
+) -> list[str]:
     """
     Convert an Odoo POS receipt dict to a list of printable text lines.
 
@@ -118,7 +122,7 @@ def _format_receipt(receipt: dict, cols: int = 42) -> list[str]:
 
     lines.append(SEP2)
     lines.append("")
-    lines.append("Thank you! — شكراً لزيارتكم".center(cols))
+    lines.append(thank_you.center(cols))
     lines.append("")
 
     return lines
@@ -132,8 +136,18 @@ class EscposDriver(AbstractDriver):
         self._device = None
         self._endpoint_out = None
         self._lock = threading.Lock()
-        self._paper_width = int((config or {}).get("paper_width", 576))
+        _pw = int((config or {}).get("paper_width", 576))
+        if _pw not in (384, 576):
+            logger.warning(
+                "EscposDriver: unexpected paper_width=%d — expected 384 (58mm) or 576 (80mm). Defaulting to 576.",
+                _pw,
+            )
+            _pw = 576
+        self._paper_width = _pw
         self._font_path = (config or {}).get("arabic_font_path") or None
+        self._thank_you = (config or {}).get(
+            "thank_you_message", "Thank you! — شكراً لزيارتكم"
+        )
         # 42 chars for 80mm paper, 32 for 58mm
         self._cols = 42 if self._paper_width >= 576 else 32
         self._connect()
@@ -147,7 +161,12 @@ class EscposDriver(AbstractDriver):
 
     def _connect(self):
         """Attempt to find and open a USB printer."""
-        # Always reset state before attempting a new connection
+        # Release resources held by any previous device handle before resetting state
+        if self._device is not None:
+            try:
+                usb.util.dispose_resources(self._device)
+            except Exception:
+                pass
         self._device = None
         self._endpoint_out = None
 
@@ -179,6 +198,15 @@ class EscposDriver(AbstractDriver):
                 custom_match=lambda e: usb.util.endpoint_direction(e.bEndpointAddress)
                 == usb.util.ENDPOINT_OUT,
             )
+            if self._endpoint_out is None:
+                logger.warning(
+                    "EscposDriver: no OUT endpoint on %04x:%04x",
+                    self._device.idVendor,
+                    self._device.idProduct,
+                )
+                self._device = None
+                self.set_status("error", "No OUT endpoint found on printer interface")
+                return
             self.set_status("connected")
             logger.info(
                 "EscposDriver: connected to %04x:%04x",
@@ -194,11 +222,11 @@ class EscposDriver(AbstractDriver):
     # ── Low-level write ───────────────────────────────────────────────────
 
     def _write(self, data: bytes):
-        if self._endpoint_out is None:
-            self._connect()
-        if self._endpoint_out is None:
-            raise IOError("Printer not connected")
         with self._lock:
+            if self._endpoint_out is None:
+                self._connect()
+            if self._endpoint_out is None:
+                raise IOError("Printer not connected")
             self._endpoint_out.write(data)
 
     # ── High-level API ────────────────────────────────────────────────────
@@ -215,7 +243,7 @@ class EscposDriver(AbstractDriver):
         from rpidriver.plugins.arabic_escpos import render_receipt_lines
 
         if isinstance(receipt_data, dict):
-            lines = _format_receipt(receipt_data, cols=self._cols)
+            lines = _format_receipt(receipt_data, cols=self._cols, thank_you=self._thank_you)
             cut = True
         elif isinstance(receipt_data, list):
             lines = receipt_data
@@ -242,6 +270,16 @@ class EscposDriver(AbstractDriver):
     def cut(self):
         """Send a partial cut command."""
         self._write(LF * 3 + CUT_PARTIAL)
+
+    def close(self):
+        """Release USB resources held by the device handle."""
+        if self._device is not None:
+            try:
+                usb.util.dispose_resources(self._device)
+            except Exception:
+                pass
+        self._device = None
+        self._endpoint_out = None
 
 
 # ── Plugin registration ───────────────────────────────────────────────────────

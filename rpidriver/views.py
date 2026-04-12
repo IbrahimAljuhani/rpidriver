@@ -2,6 +2,7 @@
 Web interface views for RPiDriver dashboard.
 """
 
+import logging
 import platform
 import subprocess
 
@@ -9,6 +10,7 @@ from flask import Blueprint, render_template, redirect, session, url_for
 from flask_babel import gettext as _
 
 bp = Blueprint("views", __name__)
+logger = logging.getLogger(__name__)
 
 
 def _get_drivers():
@@ -29,6 +31,7 @@ def status():
         try:
             statuses[name] = drv.get_status()
         except Exception:
+            logger.warning("status: driver %s unavailable", name, exc_info=True)
             statuses[name] = {"status": "error", "messages": [_("Driver unavailable")]}
     return render_template("status.html", statuses=statuses)
 
@@ -45,7 +48,10 @@ def system():
         result = subprocess.run(
             ["vcgencmd", "measure_temp"], capture_output=True, text=True, timeout=2
         )
-        info["temperature"] = result.stdout.strip()
+        if result.returncode == 0 and result.stdout.strip():
+            info["temperature"] = result.stdout.strip()
+        else:
+            info["temperature"] = _("N/A")
     except OSError:
         info["temperature"] = _("N/A (not a Raspberry Pi)")
     return render_template("system.html", info=info)
@@ -67,6 +73,7 @@ def usb_devices():
                 }
             )
     except Exception:
+        logger.debug("usb_devices: enumeration failed", exc_info=True)
         devices = []
     return render_template("usb_devices.html", devices=devices)
 

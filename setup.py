@@ -20,6 +20,7 @@ setup(
     package_data={
         "rpidriver": [
             "templates/*.html",
+            "static/css/*.css",
             "translations/*/LC_MESSAGES/*.po",
             "translations/*/LC_MESSAGES/*.mo",
         ],

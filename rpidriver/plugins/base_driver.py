@@ -32,9 +32,15 @@ class AbstractDriver(ABC):
         return {**self._status, "messages": list(self._status["messages"])}
 
     def set_status(self, status: str, message: str = ""):
-        """Update internal status, capping the messages list at MAX_MESSAGES."""
+        """Update internal status, capping the messages list at MAX_MESSAGES.
+
+        Transitioning to "connected" clears the message history so stale
+        error messages are not shown after a successful reconnect.
+        """
         self._status["status"] = status
-        if message:
+        if status == "connected":
+            self._status["messages"].clear()
+        elif message:
             msgs = self._status.setdefault("messages", [])
             msgs.append(message)
             if len(msgs) > self.MAX_MESSAGES:
@@ -85,12 +91,13 @@ class ThreadDriver(AbstractDriver):
         logger.info("[%s] background thread started.", self.name)
 
     def stop(self):
-        """Signal the background thread to stop and wait for it."""
+        """Signal the background thread to stop, wait for it, then close the device."""
         self._stop_event.set()
         if self._thread:
             self._thread.join(timeout=5)
             if self._thread.is_alive():
                 logger.warning("[%s] thread did not stop within 5s.", self.name)
+        self.close()
         logger.info("[%s] background thread stopped.", self.name)
 
     # ── Internal loop ─────────────────────────────────────────────────────

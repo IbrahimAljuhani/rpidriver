@@ -3,9 +3,11 @@ RPiDriver — Smart hardware proxy for Odoo POS.
 Flask application factory, config loader, Babel setup, and plugin loader.
 """
 
+import atexit
 import importlib
 import logging
 import os
+import secrets
 from configparser import ConfigParser
 
 from flask import Flask, request, session
@@ -15,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 # Drivers registry: plugin_name → driver instance
 drivers = {}
+_atexit_registered = False
 
 
 def get_drivers() -> dict:
@@ -42,7 +45,15 @@ def get_locale():
 def create_app(config_path=None):
     """Application factory."""
     app = Flask(__name__, instance_relative_config=False)
-    app.secret_key = os.environ.get("RPIDRIVER_SECRET", "rpidriver-dev-secret")
+    _secret = os.environ.get("RPIDRIVER_SECRET")
+    if not _secret:
+        _secret = secrets.token_hex(32)
+        logger.warning(
+            "RPIDRIVER_SECRET not set — using a random key. "
+            "Sessions will not survive a restart. "
+            "Set RPIDRIVER_SECRET in the environment for production."
+        )
+    app.secret_key = _secret
 
     # ── Config ──────────────────────────────────────────────────────────────
     if config_path:
@@ -50,7 +61,14 @@ def create_app(config_path=None):
     config = get_config(app)
     app.config["RPIDRIVER_CONFIG"] = config
 
-    # Clear the drivers registry so repeated create_app() calls don't accumulate
+    # Stop any running drivers from a previous create_app() call (e.g. in tests),
+    # then clear the registry so it doesn't accumulate stale instances.
+    for _drv in list(drivers.values()):
+        if hasattr(_drv, "stop"):
+            try:
+                _drv.stop()
+            except Exception:
+                pass
     drivers.clear()
 
     # ── Flask-Babel ──────────────────────────────────────────────────────────
@@ -95,6 +113,25 @@ def create_app(config_path=None):
                 logger.info("Registered blueprint for plugin: %s", plugin_name)
         except ImportError as exc:
             logger.error("Failed to load plugin %s: %s", plugin_name, exc)
+        except Exception as exc:
+            logger.error("Failed to initialise plugin %s: %s", plugin_name, exc, exc_info=True)
+
+    # Register a single atexit handler that reads drivers at shutdown time,
+    # avoiding stale references when create_app() is called more than once
+    # (e.g. repeated calls in tests).
+    global _atexit_registered
+
+    def _stop_all_drivers():
+        for name, drv in drivers.items():
+            if hasattr(drv, "stop"):
+                try:
+                    drv.stop()
+                except Exception:
+                    logger.exception("Error stopping driver %s", name)
+
+    if not _atexit_registered:
+        atexit.register(_stop_all_drivers)
+        _atexit_registered = True
 
     # odoo8 (hw_proxy endpoints) is always loaded
     from rpidriver.plugins import odoo8  # noqa: E402

@@ -2,7 +2,18 @@
 {% block title %}RPiDriver — {{ _('Status') }}{% endblock %}
 
 {% block head %}
-<meta http-equiv="refresh" content="5" />
+<script>
+  setInterval(() => {
+    fetch(location.href)
+      .then(r => r.text())
+      .then(html => {
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const next = doc.querySelector('main');
+        if (next) document.querySelector('main').innerHTML = next.innerHTML;
+      })
+      .catch(() => {});
+  }, 5000);
+</script>
 {% endblock %}
 
 {% block content %}

@@ -24,6 +24,9 @@ IPP_VERSION = (2, 0)
 
 _request_id_counter = itertools.count(1)
 
+_CONNECT_TIMEOUT = 2   # seconds — GET /  health check
+_PRINT_TIMEOUT = 10    # seconds — POST IPP print job
+
 
 def _ipp_attribute(tag: int, name: str, value: bytes) -> bytes:
     """Encode a single IPP attribute."""
@@ -96,7 +99,7 @@ class CupsDriver(AbstractDriver):
         try:
             r = requests.get(
                 f"http://{self._cups_host}:{self._cups_port}/",
-                timeout=2,
+                timeout=_CONNECT_TIMEOUT,
             )
             if r.status_code < 400:
                 self.set_status("connected")
@@ -121,7 +124,7 @@ class CupsDriver(AbstractDriver):
                     self._ipp_url,
                     data=ipp_body,
                     headers={"Content-Type": "application/ipp"},
-                    timeout=10,
+                    timeout=_PRINT_TIMEOUT,
                 )
                 resp.raise_for_status()
                 logger.info("CupsDriver: job '%s' submitted.", job_name)

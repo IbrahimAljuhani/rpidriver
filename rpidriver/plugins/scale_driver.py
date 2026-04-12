@@ -36,7 +36,7 @@ def parse_toledo8217(line: bytes) -> dict | None:
             weight = float(match.group(1))
             unit = match.group(2).lower()
             return {"weight": weight, "unit": unit, "status": "ok"}
-    except Exception:
+    except (ValueError, AttributeError):
         pass
     return None
 
@@ -55,7 +55,7 @@ def parse_adam(line: bytes) -> dict | None:
             weight = float(match.group(1).replace(" ", ""))
             unit = match.group(2).lower()
             return {"weight": weight, "unit": unit, "status": "ok"}
-    except Exception:
+    except (ValueError, AttributeError):
         pass
     return None
 
@@ -80,6 +80,13 @@ class ScaleDriver(ThreadDriver):
         cfg = config or {}
         self._port = cfg.get("port", "/dev/ttyUSB0")
         self._baudrate = int(cfg.get("baudrate", 9600))
+        _STANDARD_BAUD = {1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200}
+        if self._baudrate not in _STANDARD_BAUD:
+            logger.warning(
+                "ScaleDriver: unusual baudrate %d — common values are %s.",
+                self._baudrate,
+                sorted(_STANDARD_BAUD),
+            )
         self._protocol = cfg.get("protocol", "toledo8217")
         self._timeout = float(cfg.get("timeout", 1.0))
         self._serial: serial.Serial | None = None
@@ -124,7 +131,13 @@ class ScaleDriver(ThreadDriver):
         except serial.SerialException as exc:
             logger.warning("ScaleDriver: read error: %s", exc)
             self.set_status("error", str(exc))
+            try:
+                self._serial.close()
+            except Exception:
+                pass
             self._serial = None
+            with self._lock:
+                self._latest = {"weight": 0.0, "unit": "kg", "status": "disconnected"}
 
     # ── Public API ────────────────────────────────────────────────────────
 
