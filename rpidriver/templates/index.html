@@ -1,0 +1,82 @@
+{% extends "layout.html" %}
+{% block title %}RPiDriver — {{ _('Home') }}{% endblock %}
+
+{% block content %}
+<div class="card">
+  <h2>{{ _('RPiDriver') }}</h2>
+  <p style="color: var(--muted); margin-bottom: 1rem;">
+    {{ _('Smart hardware proxy for Odoo POS — Arabic POS Bridge') }}
+  </p>
+  <p>
+    {{ _('RPiDriver is running and ready to accept connections from Odoo POS.') }}
+  </p>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
+
+  <a href="{{ url_for('views.status') }}" style="text-decoration:none;">
+    <div class="card" style="text-align:center; cursor:pointer;">
+      <div style="font-size:2rem; margin-bottom:0.5rem;">🖨️</div>
+      <div style="font-weight:600;">{{ _('Driver Status') }}</div>
+      <div style="color:var(--muted); font-size:0.85rem;">{{ _('Printers, scales, displays') }}</div>
+    </div>
+  </a>
+
+  <a href="{{ url_for('views.system') }}" style="text-decoration:none;">
+    <div class="card" style="text-align:center; cursor:pointer;">
+      <div style="font-size:2rem; margin-bottom:0.5rem;">⚙️</div>
+      <div style="font-weight:600;">{{ _('System Info') }}</div>
+      <div style="color:var(--muted); font-size:0.85rem;">{{ _('Hostname, platform, temperature') }}</div>
+    </div>
+  </a>
+
+  <a href="{{ url_for('views.usb_devices') }}" style="text-decoration:none;">
+    <div class="card" style="text-align:center; cursor:pointer;">
+      <div style="font-size:2rem; margin-bottom:0.5rem;">🔌</div>
+      <div style="font-weight:600;">{{ _('USB Devices') }}</div>
+      <div style="color:var(--muted); font-size:0.85rem;">{{ _('Connected USB hardware') }}</div>
+    </div>
+  </a>
+
+</div>
+
+<div class="card">
+  <h2>{{ _('Odoo Connection') }}</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>{{ _('Endpoint') }}</th>
+        <th>{{ _('URL') }}</th>
+        <th>{{ _('Protocol') }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Hello / Ping</td>
+        <td><code>/hw_proxy/hello</code></td>
+        <td>HTTP GET</td>
+      </tr>
+      <tr>
+        <td>Handshake</td>
+        <td><code>/hw_proxy/handshake</code></td>
+        <td>JSON-RPC 2.0</td>
+      </tr>
+      <tr>
+        <td>Status</td>
+        <td><code>/hw_proxy/status_json</code></td>
+        <td>JSON-RPC 2.0</td>
+      </tr>
+      <tr>
+        <td>Scale</td>
+        <td><code>/hw_proxy/scale_read</code></td>
+        <td>JSON-RPC 2.0</td>
+      </tr>
+      <tr>
+        <td>Print Receipt</td>
+        <td><code>/hw_proxy/print_receipt</code></td>
+        <td>JSON-RPC 2.0</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+{% endblock %}

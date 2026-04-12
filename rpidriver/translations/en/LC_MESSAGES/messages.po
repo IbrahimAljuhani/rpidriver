@@ -1,0 +1,125 @@
+# English translations for RPiDriver (reference/identity catalog)
+# Copyright (C) 2024 Ibrahim Aljuhani <info@ia.sa>
+# SPDX-License-Identifier: AGPL-3.0
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: rpidriver 1.0\n"
+"Report-Msgid-Bugs-To: info@ia.sa\n"
+"POT-Creation-Date: 2024-01-01 00:00+0300\n"
+"PO-Revision-Date: 2024-01-01 00:00+0300\n"
+"Last-Translator: Ibrahim Aljuhani <info@ia.sa>\n"
+"Language: en\n"
+"Language-Team: English\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Home"
+msgstr "Home"
+
+msgid "Status"
+msgstr "Status"
+
+msgid "System"
+msgstr "System"
+
+msgid "USB"
+msgstr "USB"
+
+msgid "RPiDriver"
+msgstr "RPiDriver"
+
+msgid "Smart hardware proxy for Odoo POS — Arabic POS Bridge"
+msgstr "Smart hardware proxy for Odoo POS — Arabic POS Bridge"
+
+msgid "RPiDriver is running and ready to accept connections from Odoo POS."
+msgstr "RPiDriver is running and ready to accept connections from Odoo POS."
+
+msgid "Driver Status"
+msgstr "Driver Status"
+
+msgid "Printers, scales, displays"
+msgstr "Printers, scales, displays"
+
+msgid "System Info"
+msgstr "System Info"
+
+msgid "Hostname, platform, temperature"
+msgstr "Hostname, platform, temperature"
+
+msgid "USB Devices"
+msgstr "USB Devices"
+
+msgid "Connected USB hardware"
+msgstr "Connected USB hardware"
+
+msgid "Odoo Connection"
+msgstr "Odoo Connection"
+
+msgid "Endpoint"
+msgstr "Endpoint"
+
+msgid "URL"
+msgstr "URL"
+
+msgid "Protocol"
+msgstr "Protocol"
+
+msgid "Auto-refreshes every 5 seconds."
+msgstr "Auto-refreshes every 5 seconds."
+
+msgid "No drivers loaded. Check config.ini → [rpidriver] drivers."
+msgstr "No drivers loaded. Check config.ini → [rpidriver] drivers."
+
+msgid "Connected"
+msgstr "Connected"
+
+msgid "Disconnected"
+msgstr "Disconnected"
+
+msgid "Error"
+msgstr "Error"
+
+msgid "Driver unavailable"
+msgstr "Driver unavailable"
+
+msgid "System Information"
+msgstr "System Information"
+
+msgid "Hostname"
+msgstr "Hostname"
+
+msgid "Platform"
+msgstr "Platform"
+
+msgid "Python"
+msgstr "Python"
+
+msgid "Architecture"
+msgstr "Architecture"
+
+msgid "CPU Temperature"
+msgstr "CPU Temperature"
+
+msgid "N/A (not a Raspberry Pi)"
+msgstr "N/A (not a Raspberry Pi)"
+
+msgid "Connected USB Devices"
+msgstr "Connected USB Devices"
+
+msgid "Vendor ID"
+msgstr "Vendor ID"
+
+msgid "Product ID"
+msgstr "Product ID"
+
+msgid "Manufacturer"
+msgstr "Manufacturer"
+
+msgid "Product"
+msgstr "Product"
+
+msgid "No USB devices found or pyusb not available."
+msgstr "No USB devices found or pyusb not available."

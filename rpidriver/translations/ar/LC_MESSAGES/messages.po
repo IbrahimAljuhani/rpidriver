@@ -1,0 +1,125 @@
+# Arabic translations for RPiDriver
+# Copyright (C) 2024 Ibrahim Aljuhani <info@ia.sa>
+# SPDX-License-Identifier: AGPL-3.0
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: rpidriver 1.0\n"
+"Report-Msgid-Bugs-To: info@ia.sa\n"
+"POT-Creation-Date: 2024-01-01 00:00+0300\n"
+"PO-Revision-Date: 2024-01-01 00:00+0300\n"
+"Last-Translator: Ibrahim Aljuhani <info@ia.sa>\n"
+"Language: ar\n"
+"Language-Team: Arabic\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=6; plural=n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 ? 4 : 5;\n"
+
+msgid "Home"
+msgstr "الرئيسية"
+
+msgid "Status"
+msgstr "الحالة"
+
+msgid "System"
+msgstr "النظام"
+
+msgid "USB"
+msgstr "USB"
+
+msgid "RPiDriver"
+msgstr "RPiDriver"
+
+msgid "Smart hardware proxy for Odoo POS — Arabic POS Bridge"
+msgstr "وسيط أجهزة ذكي لـ Odoo POS — جسر نقاط البيع العربي"
+
+msgid "RPiDriver is running and ready to accept connections from Odoo POS."
+msgstr "RPiDriver يعمل وجاهز لقبول الاتصالات من Odoo POS."
+
+msgid "Driver Status"
+msgstr "حالة المشغّلات"
+
+msgid "Printers, scales, displays"
+msgstr "الطابعات، الموازين، الشاشات"
+
+msgid "System Info"
+msgstr "معلومات النظام"
+
+msgid "Hostname, platform, temperature"
+msgstr "اسم الجهاز، المنصة، درجة الحرارة"
+
+msgid "USB Devices"
+msgstr "أجهزة USB"
+
+msgid "Connected USB hardware"
+msgstr "أجهزة USB المتصلة"
+
+msgid "Odoo Connection"
+msgstr "اتصال Odoo"
+
+msgid "Endpoint"
+msgstr "نقطة الاتصال"
+
+msgid "URL"
+msgstr "الرابط"
+
+msgid "Protocol"
+msgstr "البروتوكول"
+
+msgid "Auto-refreshes every 5 seconds."
+msgstr "يتحدث تلقائياً كل 5 ثوانٍ."
+
+msgid "No drivers loaded. Check config.ini → [rpidriver] drivers."
+msgstr "لا توجد مشغّلات محمّلة. تحقق من config.ini ← [rpidriver] drivers."
+
+msgid "Connected"
+msgstr "متصل"
+
+msgid "Disconnected"
+msgstr "غير متصل"
+
+msgid "Error"
+msgstr "خطأ"
+
+msgid "Driver unavailable"
+msgstr "المشغّل غير متاح"
+
+msgid "System Information"
+msgstr "معلومات النظام"
+
+msgid "Hostname"
+msgstr "اسم الجهاز"
+
+msgid "Platform"
+msgstr "المنصة"
+
+msgid "Python"
+msgstr "بايثون"
+
+msgid "Architecture"
+msgstr "المعمارية"
+
+msgid "CPU Temperature"
+msgstr "درجة حرارة المعالج"
+
+msgid "N/A (not a Raspberry Pi)"
+msgstr "غير متاح (ليس Raspberry Pi)"
+
+msgid "Connected USB Devices"
+msgstr "أجهزة USB المتصلة"
+
+msgid "Vendor ID"
+msgstr "معرّف المورد"
+
+msgid "Product ID"
+msgstr "معرّف المنتج"
+
+msgid "Manufacturer"
+msgstr "الشركة المصنّعة"
+
+msgid "Product"
+msgstr "المنتج"
+
+msgid "No USB devices found or pyusb not available."
+msgstr "لم يتم العثور على أجهزة USB أو pyusb غير متاح."

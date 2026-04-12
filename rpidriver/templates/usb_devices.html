@@ -1,0 +1,32 @@
+{% extends "layout.html" %}
+{% block title %}RPiDriver — {{ _('USB Devices') }}{% endblock %}
+
+{% block content %}
+<div class="card">
+  <h2>{{ _('Connected USB Devices') }}</h2>
+  {% if devices %}
+  <table>
+    <thead>
+      <tr>
+        <th>{{ _('Vendor ID') }}</th>
+        <th>{{ _('Product ID') }}</th>
+        <th>{{ _('Manufacturer') }}</th>
+        <th>{{ _('Product') }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for dev in devices %}
+      <tr>
+        <td><code>{{ dev.vendor_id }}</code></td>
+        <td><code>{{ dev.product_id }}</code></td>
+        <td>{{ dev.manufacturer or '—' }}</td>
+        <td>{{ dev.product or '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color:var(--muted);">{{ _('No USB devices found or pyusb not available.') }}</p>
+  {% endif %}
+</div>
+{% endblock %}

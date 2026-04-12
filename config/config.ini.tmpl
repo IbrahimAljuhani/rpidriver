@@ -1,0 +1,70 @@
+# RPiDriver Configuration Template
+# Copy to /etc/rpidriver/config.ini and edit for your setup.
+# Override path with: RPIDRIVER_CONFIG=/path/to/config.ini
+#
+# Secret key for Flask sessions is set via the environment variable:
+#   export RPIDRIVER_SECRET="your-strong-secret-here"
+
+[rpidriver]
+# ── Server ───────────────────────────────────────────────────────────────────
+# Address to bind the Flask server on.
+host = 0.0.0.0
+
+# Port to listen on (Odoo default IoT Box port is 8069).
+port = 8069
+
+# Set to true only for local development — never in production.
+debug = false
+
+# ── Plugin loader ─────────────────────────────────────────────────────────────
+# Comma-separated list of plugin module names to load.
+# Available: escpos_driver, scale_driver, display_driver, cups_driver
+# The odoo8 (hw_proxy) blueprint is always loaded regardless of this list.
+drivers = escpos_driver, scale_driver
+
+
+[escpos_driver]
+# Paper width in pixels. 576 = 80mm @ 203 dpi. 384 = 58mm @ 203 dpi.
+paper_width = 576
+
+# Absolute path to a TTF font that supports Arabic (e.g. NotoSansArabic-Regular.ttf).
+# Without this, Arabic characters will not print correctly.
+# arabic_font_path = /usr/share/fonts/truetype/noto/NotoSansArabic-Regular.ttf
+
+# USB vendor/product IDs to look for (hex, without 0x prefix).
+# Leave blank to auto-detect from the built-in list.
+# usb_vendor  = 04b8
+# usb_product = 0e15
+
+
+[scale_driver]
+# Serial port the scale is connected to.
+port = /dev/ttyUSB0
+
+# Baud rate. Toledo 8217 default: 9600. Adam Equipment default: 9600.
+baudrate = 9600
+
+# Protocol parser: toledo8217 | adam
+protocol = toledo8217
+
+# Serial read timeout in seconds.
+timeout = 1.0
+
+
+[display_driver]
+# Serial port for the customer display (USB-CDC shows as /dev/ttyACM0).
+port = /dev/ttyACM0
+
+# Baud rate. Bixolon BCD-1000 default: 9600.
+baudrate = 9600
+
+
+[cups_driver]
+# Hostname or IP of the CUPS server.
+cups_host = localhost
+
+# CUPS IPP port (default 631).
+cups_port = 631
+
+# Name of the printer queue in CUPS.
+printer_name = Receipt_Printer

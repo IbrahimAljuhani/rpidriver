@@ -1,0 +1,38 @@
+{% extends "layout.html" %}
+{% block title %}RPiDriver — {{ _('Status') }}{% endblock %}
+
+{% block head %}
+<meta http-equiv="refresh" content="5" />
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <h2>{{ _('Driver Status') }}</h2>
+  <p style="color:var(--muted); font-size:0.85rem;">{{ _('Auto-refreshes every 5 seconds.') }}</p>
+</div>
+
+{% if statuses %}
+  {% for name, info in statuses.items() %}
+  <div class="card">
+    <h2>{{ name }}</h2>
+    <div style="margin-bottom:0.5rem;">
+      {% set s = info.get('status', 'unknown') %}
+      <span class="badge badge-{{ s if s in ['connected','error','disconnected'] else 'disconnected' }}">
+        {{ _(s | capitalize) }}
+      </span>
+    </div>
+    {% if info.get('messages') %}
+    <ul style="color:var(--muted); font-size:0.88rem; padding-inline-start:1.25rem;">
+      {% for msg in info['messages'] %}
+        <li>{{ msg }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+  {% endfor %}
+{% else %}
+  <div class="card">
+    <p style="color:var(--muted);">{{ _('No drivers loaded. Check config.ini → [rpidriver] drivers.') }}</p>
+  </div>
+{% endif %}
+{% endblock %}

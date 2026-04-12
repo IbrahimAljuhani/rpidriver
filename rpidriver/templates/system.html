@@ -1,0 +1,17 @@
+{% extends "layout.html" %}
+{% block title %}RPiDriver — {{ _('System') }}{% endblock %}
+
+{% block content %}
+<div class="card">
+  <h2>{{ _('System Information') }}</h2>
+  <table>
+    <tbody>
+      <tr><th>{{ _('Hostname') }}</th><td>{{ info.hostname }}</td></tr>
+      <tr><th>{{ _('Platform') }}</th><td>{{ info.platform }}</td></tr>
+      <tr><th>{{ _('Python') }}</th><td>{{ info.python }}</td></tr>
+      <tr><th>{{ _('Architecture') }}</th><td>{{ info.arch }}</td></tr>
+      <tr><th>{{ _('CPU Temperature') }}</th><td>{{ info.temperature }}</td></tr>
+    </tbody>
+  </table>
+</div>
+{% endblock %}
