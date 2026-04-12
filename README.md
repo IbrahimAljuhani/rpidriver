@@ -35,7 +35,7 @@ Most existing solutions are either expensive, lack Arabic support, or simply don
 
 ```bash
 # Install with one command
-curl -sSL https://get.ia.sa/install | sudo bash
+curl -sSL https://ia.sa/rpidriver/install | sudo bash
 ```
 
 ---
@@ -77,7 +77,7 @@ RPiDriver is the answer: a single `curl` command turns a $35 Raspberry Pi into a
 | **OTA Updates** | One-click updates from the dashboard |
 | **Watchdog + Alerts** | Telegram notifications on failures |
 | **Visual Event Log** | Real-time status and error history |
-| **SSL from api.ia.sa** | Signed certificate, zero setup |
+| **SSL from ia.sa/rpidriver/api** | Signed certificate, zero setup |
 | **Config Backup** | Automated settings backup and restore |
 | **Email Support** | 48-hour response guarantee |
 | **Commercial License** | No AGPL obligations |
@@ -149,7 +149,7 @@ RPiDriver exposes a local Flask server on port `8069`. Odoo connects to it exact
 
 ```bash
 # 1. Install — auto-detects your Pi model and OS
-curl -sSL https://get.ia.sa/install | sudo bash
+curl -sSL https://ia.sa/rpidriver/install | sudo bash
 
 # 2. Open the dashboard
 # Navigate to http://[your-pi-ip]:8069
@@ -259,7 +259,7 @@ Based on [pywebdriver](https://github.com/akretion/pywebdriver) © Akretion
 
 <div align="center">
 
-**[Website](https://rpidriver.ia.sa)** · **[Docs](https://docs.ia.sa)** · **[Pro](mailto:info@ia.sa)** · **[ia.sa](https://ia.sa)**
+**[Website](https://ia.sa/rpidriver)** · **[Docs](https://ia.sa/docs)** · **[Pro](mailto:info@ia.sa)** · **[ia.sa](https://ia.sa)**
 
 Made with care for the Arab market · Ibrahim Aljuhani · 2026
 
