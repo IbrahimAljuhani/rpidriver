@@ -137,6 +137,49 @@ class CupsDriver(AbstractDriver):
         """Print plain text via CUPS."""
         self.print_raw(text.encode("utf-8"), job_name=job_name)
 
+    def print_image_receipt(self, receipt_b64: str, job_name: str = "rpidriver-receipt"):
+        """
+        Print a receipt received from Odoo 17/18/19 POS via CUPS.
+
+        Converts the base64 JPEG to a PNG in memory and sends it as a raw
+        print job.  Requires CUPS to be configured with a raster or PDF filter.
+        """
+        import io
+        from base64 import b64decode
+
+        from PIL import Image
+
+        raw = b64decode(receipt_b64)
+        im = Image.open(io.BytesIO(raw))
+        buf = io.BytesIO()
+        im.save(buf, format="PNG")
+        self.print_raw(buf.getvalue(), job_name=job_name)
+
+    def open_cashbox(self):
+        """Cash drawer is not supported via CUPS — log a warning."""
+        logger.warning("CupsDriver: cash drawer not supported over CUPS/IPP.")
+
+    def print_receipt(self, receipt_data, job_name: str = "rpidriver-receipt"):
+        """
+        Print an Odoo POS receipt via CUPS.
+
+        Accepts:
+          - dict  : Odoo receipt object — formatted to text lines
+          - str   : plain text sent as-is
+          - list  : pre-split lines joined with newlines
+        """
+        from rpidriver.plugins.escpos_driver import _format_receipt
+
+        if isinstance(receipt_data, dict):
+            lines = _format_receipt(receipt_data)
+            text = "\n".join(lines) + "\n\n\n"
+        elif isinstance(receipt_data, list):
+            text = "\n".join(receipt_data) + "\n\n\n"
+        else:
+            text = str(receipt_data)
+
+        self.print_text(text, job_name=job_name)
+
 
 # ── Plugin registration ───────────────────────────────────────────────────────
 

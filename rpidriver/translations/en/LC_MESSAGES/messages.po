@@ -103,6 +103,9 @@ msgstr "Architecture"
 msgid "CPU Temperature"
 msgstr "CPU Temperature"
 
+msgid "N/A"
+msgstr "N/A"
+
 msgid "N/A (not a Raspberry Pi)"
 msgstr "N/A (not a Raspberry Pi)"
 

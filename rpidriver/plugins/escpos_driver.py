@@ -38,6 +38,8 @@ GS = b"\x1d"
 INIT = ESC + b"@"
 CUT_PARTIAL = GS + b"V\x01"
 LF = b"\n"
+# Cash drawer pulse: ESC p pin t1 t2  (pin 0, 25ms on, 25ms off)
+CASHBOX_PULSE = ESC + b"\x70\x00\x19\x19"
 
 
 # ── Receipt renderer ──────────────────────────────────────────────────────────
@@ -249,7 +251,7 @@ class EscposDriver(AbstractDriver):
             lines = receipt_data
             cut = True
         else:
-            lines = str(receipt_data).split("\n")
+            lines = str(receipt_data).splitlines()
             cut = True
 
         payload = (
@@ -262,6 +264,45 @@ class EscposDriver(AbstractDriver):
             payload += LF * 3 + CUT_PARTIAL
 
         self._write(payload)
+
+    def print_image_receipt(self, receipt_b64: str):
+        """
+        Print a receipt received from Odoo 17/18/19 POS.
+
+        Odoo renders the HTML receipt to a canvas, encodes it as base64 JPEG,
+        and sends it to /hw_proxy/default_printer_action.  This method:
+          1. Decodes the base64 JPEG
+          2. Converts to greyscale → inverts → 1-bit bitmap
+          3. Encodes as ESC/POS GS v 0 raster command
+          4. Sends to the printer with a partial cut
+        """
+        import io
+        from base64 import b64decode
+
+        from PIL import Image, ImageOps
+
+        from rpidriver.plugins.arabic_escpos import image_to_escpos_raster
+
+        raw = b64decode(receipt_b64)
+        im = Image.open(io.BytesIO(raw))
+
+        # Match the IoT box colour pipeline: greyscale → invert → 1-bit
+        im = im.convert("L")
+        im = ImageOps.invert(im)
+        im = im.convert("1")
+
+        # Scale width to match paper (preserving aspect ratio)
+        if im.width != self._paper_width:
+            ratio = self._paper_width / im.width
+            new_h = max(1, int(im.height * ratio))
+            im = im.resize((self._paper_width, new_h), Image.LANCZOS)
+
+        payload = INIT + image_to_escpos_raster(im) + LF * 3 + CUT_PARTIAL
+        self._write(payload)
+
+    def open_cashbox(self):
+        """Send a cash drawer open pulse (ESC p)."""
+        self._write(CASHBOX_PULSE)
 
     def print_text(self, text: str):
         """Print raw text bytes (Latin only — no Arabic reshaping)."""
@@ -280,6 +321,7 @@ class EscposDriver(AbstractDriver):
                 pass
         self._device = None
         self._endpoint_out = None
+        self.set_status("disconnected")
 
 
 # ── Plugin registration ───────────────────────────────────────────────────────

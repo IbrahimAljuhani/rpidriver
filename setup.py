@@ -1,10 +1,16 @@
 from setuptools import setup, find_packages
 
-with open("README.md", "r", encoding="utf-8") as f:
-    long_description = f.read()
+try:
+    with open("README.md", "r", encoding="utf-8") as f:
+        long_description = f.read()
+except FileNotFoundError:
+    long_description = "Smart hardware proxy for Odoo POS — built for Raspberry Pi"
 
-with open("requirements.txt") as f:
-    install_requires = [line.strip() for line in f if line.strip() and not line.startswith("#")]
+try:
+    with open("requirements.txt") as f:
+        install_requires = [line.strip() for line in f if line.strip() and not line.startswith("#")]
+except FileNotFoundError:
+    install_requires = []
 
 setup(
     name="rpidriver",

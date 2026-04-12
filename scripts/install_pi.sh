@@ -48,7 +48,7 @@ apt-get install -y --no-install-recommends \
 if ! id "$RUN_USER" &>/dev/null; then
     info "Creating system user: $RUN_USER"
     useradd --system --no-create-home --shell /usr/sbin/nologin \
-            --groups lp,plugdev "$RUN_USER"
+            --groups lp,plugdev,dialout "$RUN_USER"
 fi
 
 # ── Clone / update source ──────────────────────────────────────────────────
@@ -68,6 +68,10 @@ python3 -m venv "$VENV_DIR"
 "$VENV_DIR/bin/pip" install -r "$INSTALL_DIR/requirements.txt"
 "$VENV_DIR/bin/pip" install -e "$INSTALL_DIR"
 
+# ── Compile translation catalogs ───────────────────────────────────────────
+info "Compiling translation catalogs..."
+"$VENV_DIR/bin/pybabel" compile -d "$INSTALL_DIR/rpidriver/translations"
+
 # ── Config file ────────────────────────────────────────────────────────────
 mkdir -p "$CONFIG_DIR"
 if [[ ! -f "$CONFIG_DIR/config.ini" ]]; then
@@ -85,14 +89,32 @@ cat > /etc/udev/rules.d/99-rpidriver.rules << 'EOF'
 SUBSYSTEM=="usb", ATTRS{idVendor}=="04b8", MODE="0666", GROUP="plugdev"
 # ESC/POS printers — Star Micronics
 SUBSYSTEM=="usb", ATTRS{idVendor}=="0519", MODE="0666", GROUP="plugdev"
-# Generic USB-CDC (customer displays)
-SUBSYSTEM=="tty", SUBSYSTEMS=="usb", MODE="0666", GROUP="plugdev"
+# Generic USB-CDC (customer displays, /dev/ttyACM*)
+SUBSYSTEM=="tty", SUBSYSTEMS=="usb", KERNEL=="ttyACM*", MODE="0666", GROUP="plugdev"
+# Serial scales and adapters (/dev/ttyUSB*)
+SUBSYSTEM=="tty", KERNEL=="ttyUSB*", MODE="0666", GROUP="plugdev"
 EOF
 udevadm control --reload-rules
 udevadm trigger
 
 # ── systemd service ────────────────────────────────────────────────────────
 info "Installing systemd service..."
+# ── Generate secret key ────────────────────────────────────────────────────
+SECRETS_FILE="$CONFIG_DIR/secrets"
+if [[ ! -f "$SECRETS_FILE" ]]; then
+    info "Generating Flask secret key..."
+    SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_hex(32))")
+    cat > "$SECRETS_FILE" << SECRETS_EOF
+# RPiDriver secrets — keep this file private (chmod 600)
+RPIDRIVER_SECRET=$SECRET_KEY
+SECRETS_EOF
+    chmod 600 "$SECRETS_FILE"
+    chown "$RUN_USER:$RUN_USER" "$SECRETS_FILE"
+    info "Secret key saved to $SECRETS_FILE"
+else
+    info "Existing secrets file found — skipping key generation."
+fi
+
 cat > /etc/systemd/system/rpidriver.service << EOF
 [Unit]
 Description=RPiDriver — Odoo POS Hardware Proxy
@@ -103,6 +125,7 @@ Type=simple
 User=$RUN_USER
 WorkingDirectory=$INSTALL_DIR
 Environment=RPIDRIVER_CONFIG=$CONFIG_DIR/config.ini
+EnvironmentFile=$CONFIG_DIR/secrets
 ExecStart=$VENV_DIR/bin/rpidriver
 Restart=on-failure
 RestartSec=5

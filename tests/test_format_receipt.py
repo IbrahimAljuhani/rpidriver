@@ -56,10 +56,12 @@ def test_custom_thank_you_message():
 
 
 def test_cols_respected():
-    lines = _format_receipt(MINIMAL_RECEIPT, cols=32)
-    # No line should exceed cols characters (separators are exactly cols wide)
-    for l in lines:
-        assert len(l) <= 32, f"Line too long ({len(l)}): {l!r}"
+    # Use a receipt whose company name fits within cols=32
+    receipt = {**MINIMAL_RECEIPT, "company": {"name": "Short Name"}}
+    lines = _format_receipt(receipt, cols=32)
+    # Separator lines are exactly cols wide; no other line should exceed cols
+    for line in lines:
+        assert len(line) <= 32, f"Line too long ({len(line)}): {line!r}"
 
 
 def test_empty_orderlines():

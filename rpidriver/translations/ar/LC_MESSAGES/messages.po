@@ -103,6 +103,9 @@ msgstr "المعمارية"
 msgid "CPU Temperature"
 msgstr "درجة حرارة المعالج"
 
+msgid "N/A"
+msgstr "غير متاح"
+
 msgid "N/A (not a Raspberry Pi)"
 msgstr "غير متاح (ليس Raspberry Pi)"
 

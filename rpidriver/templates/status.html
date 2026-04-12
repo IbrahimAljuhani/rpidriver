@@ -3,7 +3,7 @@
 
 {% block head %}
 <script>
-  setInterval(() => {
+  function refreshStatus() {
     fetch(location.href)
       .then(r => r.text())
       .then(html => {
@@ -11,8 +11,10 @@
         const next = doc.querySelector('main');
         if (next) document.querySelector('main').innerHTML = next.innerHTML;
       })
-      .catch(() => {});
-  }, 5000);
+      .catch(() => {})
+      .finally(() => setTimeout(refreshStatus, 5000));
+  }
+  setTimeout(refreshStatus, 5000);
 </script>
 {% endblock %}
 

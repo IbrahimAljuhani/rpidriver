@@ -5,6 +5,14 @@ Supported protocols:
   - Toledo 8217   (default) — used by Mettler Toledo scales
   - Adam Equipment — used by Adam balance scales
 
+Toledo 8217 serial parameters (from Mettler-Toledo 8217 protocol manual):
+  baudrate=9600, bytesize=7, parity=EVEN, stopbits=1
+  Active polling: driver sends b'W' and reads back STX + weight + CR.
+
+Adam Equipment serial parameters:
+  baudrate=4800, bytesize=8, parity=NONE, stopbits=1
+  Active polling: driver sends b'P' and reads back weight line.
+
 The driver runs a background polling thread and caches the latest reading.
 Registered in drivers{} as "scale_driver".
 """
@@ -18,24 +26,48 @@ from rpidriver.plugins.base_driver import ThreadDriver
 
 logger = logging.getLogger(__name__)
 
+# ── Serial parameter presets per protocol ─────────────────────────────────────
+
+# Toledo 8217: 7E1 — matches Odoo's SerialScaleDriver and Mettler-Toledo manual
+_TOLEDO_SERIAL = dict(
+    baudrate=9600,
+    bytesize=serial.SEVENBITS,
+    parity=serial.PARITY_EVEN,
+    stopbits=serial.STOPBITS_ONE,
+)
+
+# Adam Equipment: 8N1 at 4800 baud
+_ADAM_SERIAL = dict(
+    baudrate=4800,
+    bytesize=serial.EIGHTBITS,
+    parity=serial.PARITY_NONE,
+    stopbits=serial.STOPBITS_ONE,
+)
+
+PROTOCOL_SERIAL_PARAMS = {
+    "toledo8217": _TOLEDO_SERIAL,
+    "adam": _ADAM_SERIAL,
+}
+
 # ── Protocol parsers ──────────────────────────────────────────────────────────
 
 
 def parse_toledo8217(line: bytes) -> dict | None:
     """
-    Parse a Toledo 8217 weight frame.
+    Parse a Toledo 8217 weight response.
 
-    Frame format (ASCII): ?W+000001.234kg\r\n  or  W+000001kg\r\n
-    Returns {"weight": float, "unit": str} or None on parse failure.
+    Frame: STX  weight_digits  [N]  CR
+    e.g.  b'\\x02  1.234\\r'  or  b'\\x02  1234N\\r'
+    The STX (0x02) is stripped by readline(); we match the numeric part.
     """
     try:
-        text = line.decode("ascii", errors="ignore").strip()
-        # \.\d* makes the decimal point optional (handles integer weights too)
-        match = re.search(r"([+-]?\d+\.?\d*)\s*([a-zA-Z]+)", text)
+        # Strip STX, CR, LF, whitespace
+        text = line.decode("ascii", errors="ignore").strip().lstrip("\x02")
+        # Extract weight; 'N' suffix means weight is negative on some units
+        match = re.search(r"([+-]?\s*\d+\.?\d*)\s*N?", text)
         if match:
-            weight = float(match.group(1))
-            unit = match.group(2).lower()
-            return {"weight": weight, "unit": unit, "status": "ok"}
+            weight = float(match.group(1).replace(" ", ""))
+            return {"weight": weight, "unit": "kg", "status": "ok"}
     except (ValueError, AttributeError):
         pass
     return None
@@ -71,27 +103,36 @@ PROTOCOL_PARSERS = {
 
 class ScaleDriver(ThreadDriver):
     name = "scale_driver"
-    # poll_interval is effectively dominated by the serial read timeout (1.0 s).
-    # This value applies only when the port is open and returns data immediately.
+    # poll_interval applies between active polling cycles (after the serial
+    # read timeout returns).  Keep it short; real pacing comes from timeout.
     poll_interval = 0.1
 
     def __init__(self, config=None):
         super().__init__(config)
         cfg = config or {}
         self._port = cfg.get("port", "/dev/ttyUSB0")
-        self._baudrate = int(cfg.get("baudrate", 9600))
-        _STANDARD_BAUD = {1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200}
-        if self._baudrate not in _STANDARD_BAUD:
-            logger.warning(
-                "ScaleDriver: unusual baudrate %d — common values are %s.",
-                self._baudrate,
-                sorted(_STANDARD_BAUD),
-            )
         self._protocol = cfg.get("protocol", "toledo8217")
         self._timeout = float(cfg.get("timeout", 1.0))
         self._serial: serial.Serial | None = None
         self._latest: dict = {"weight": 0.0, "unit": "kg", "status": "disconnected"}
         # _lock is inherited from ThreadDriver — do not shadow it
+
+        # Serial parameters: use protocol preset, allow per-key config overrides
+        serial_params = dict(PROTOCOL_SERIAL_PARAMS.get(self._protocol, _TOLEDO_SERIAL))
+        if "baudrate" in cfg:
+            serial_params["baudrate"] = int(cfg["baudrate"])
+            _STANDARD_BAUD = {1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200}
+            if serial_params["baudrate"] not in _STANDARD_BAUD:
+                logger.warning(
+                    "ScaleDriver: unusual baudrate %d — common values are %s.",
+                    serial_params["baudrate"],
+                    sorted(_STANDARD_BAUD),
+                )
+        self._serial_params = serial_params
+
+        # Active polling: command sent to the scale to request a weight reading
+        self._measure_cmd: bytes = b"W" if self._protocol == "toledo8217" else b"P"
+
         self._parser = PROTOCOL_PARSERS.get(self._protocol, parse_toledo8217)
         self._open_serial()
 
@@ -102,11 +143,20 @@ class ScaleDriver(ThreadDriver):
         try:
             self._serial = serial.Serial(
                 port=self._port,
-                baudrate=self._baudrate,
                 timeout=self._timeout,
+                write_timeout=self._timeout,
+                **self._serial_params,
             )
             self.set_status("connected")
-            logger.info("ScaleDriver: opened %s at %d baud.", self._port, self._baudrate)
+            logger.info(
+                "ScaleDriver: opened %s — protocol=%s baudrate=%d %d%s%d",
+                self._port,
+                self._protocol,
+                self._serial_params["baudrate"],
+                self._serial_params["bytesize"],
+                self._serial_params["parity"],
+                self._serial_params["stopbits"],
+            )
         except serial.SerialException as exc:
             self.set_status("disconnected", str(exc))
             logger.warning("ScaleDriver: could not open %s: %s", self._port, exc)
@@ -115,12 +165,13 @@ class ScaleDriver(ThreadDriver):
 
     def run(self):
         if self._serial is None or not self._serial.is_open:
-            # Use the stop event so the thread can be interrupted during the wait
             self._stop_event.wait(2)
             self._open_serial()
             return
 
         try:
+            # Active polling: send the measure command then read the response
+            self._serial.write(self._measure_cmd)
             line = self._serial.readline()
             if line:
                 parsed = self._parser(line)

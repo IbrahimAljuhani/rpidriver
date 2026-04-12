@@ -64,7 +64,7 @@ def test_status_json_structure(client):
 def test_scale_read_no_driver(client):
     """
     POST /hw_proxy/scale_read with no scale driver loaded must return
-    a zero-weight result rather than an error.
+    a JSON-RPC error (not a result).
     """
     payload = {"jsonrpc": "2.0", "method": "call", "id": 3, "params": {}}
     resp = client.post(
@@ -74,8 +74,58 @@ def test_scale_read_no_driver(client):
     )
     assert resp.status_code == 200
     body = resp.get_json()
-    assert "weight" in body["result"]
-    assert isinstance(body["result"]["weight"], (int, float))
+    assert body["jsonrpc"] == "2.0"
+    assert "error" in body
+    assert "No scale driver loaded" in body["error"]["message"]
+
+
+# ── /hw_proxy/default_printer_action ─────────────────────────────────────────
+
+
+def test_default_printer_action_no_driver(client):
+    """default_printer_action with no printer loaded must return a JSON-RPC error."""
+    payload = {
+        "jsonrpc": "2.0",
+        "method": "call",
+        "id": 5,
+        "params": {"data": {"action": "print_receipt", "receipt": ""}},
+    }
+    resp = client.post(
+        "/hw_proxy/default_printer_action",
+        data=json.dumps(payload),
+        content_type="application/json",
+    )
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["jsonrpc"] == "2.0"
+    assert "error" in body
+    assert "No printer driver loaded" in body["error"]["message"]
+
+
+def test_default_printer_action_unknown_action(client):
+    """Unknown action with a printer present must return a JSON-RPC error naming the action."""
+    from unittest.mock import MagicMock, patch
+
+    mock_printer = MagicMock()
+    with patch(
+        "rpidriver.plugins.odoo8._get_drivers",
+        return_value={"escpos_driver": mock_printer},
+    ):
+        payload = {
+            "jsonrpc": "2.0",
+            "method": "call",
+            "id": 6,
+            "params": {"data": {"action": "unknown"}},
+        }
+        resp = client.post(
+            "/hw_proxy/default_printer_action",
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert "error" in body
+    assert "unknown" in body["error"]["message"]
 
 
 # ── /hw_proxy/print_receipt ───────────────────────────────────────────────────

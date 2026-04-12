@@ -100,14 +100,54 @@ def scale_read():
         return _jsonrpc_result(reading, _get_jsonrpc_id())
     except Exception as exc:
         logger.exception("scale_read failed: %s", exc)
-        return _jsonrpc_result({"weight": 0.0, "unit": "kg", "status": "error"}, _get_jsonrpc_id())
+        return _jsonrpc_error(str(exc), req_id=_get_jsonrpc_id())
+
+
+@bp.route("/default_printer_action", methods=["POST"])
+def default_printer_action():
+    """
+    POST /hw_proxy/default_printer_action  (JSON-RPC)
+    Primary print endpoint for Odoo 17 / 18 / 19.
+
+    params.data.action values:
+      "print_receipt" — params.data.receipt is a base64 JPEG rendered from HTML canvas
+      "cashbox"       — open the cash drawer
+    """
+    data = request.get_json(force=True, silent=True) or {}
+    req_id = data.get("id")
+    action_data = (data.get("params") or {}).get("data") or {}
+    action = action_data.get("action", "")
+
+    drivers = _get_drivers()
+    printer = drivers.get("escpos_driver") or drivers.get("cups_driver")
+    if printer is None:
+        return _jsonrpc_error("No printer driver loaded", req_id=req_id)
+
+    if action == "cashbox":
+        try:
+            printer.open_cashbox()
+            return _jsonrpc_result(True, req_id)
+        except Exception as exc:
+            logger.exception("default_printer_action cashbox failed: %s", exc)
+            return _jsonrpc_error(str(exc), req_id=req_id)
+
+    if action == "print_receipt":
+        receipt_b64 = action_data.get("receipt", "")
+        try:
+            printer.print_image_receipt(receipt_b64)
+            return _jsonrpc_result(True, req_id)
+        except Exception as exc:
+            logger.exception("default_printer_action print failed: %s", exc)
+            return _jsonrpc_error(str(exc), req_id=req_id)
+
+    return _jsonrpc_error(f"Unknown action: {action!r}", req_id=req_id)
 
 
 @bp.route("/print_receipt", methods=["POST"])
 def print_receipt():
     """
     POST /hw_proxy/print_receipt  (JSON-RPC)
-    Accepts an ESC/POS receipt XML/JSON payload from Odoo POS and prints it.
+    Legacy endpoint for Odoo 13–16.  Odoo 17+ uses /hw_proxy/default_printer_action.
     """
     data = request.get_json(force=True, silent=True) or {}
     params = data.get("params", {})

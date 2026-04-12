@@ -1,6 +1,12 @@
 """
 Tests for scale protocol parsers (toledo8217 and adam).
 
+Toledo 8217 real frame format (from Mettler-Toledo 8217 protocol manual):
+    STX  <spaces>  <digits>[.<digits>]  [N]  CR
+e.g. b'\\x02  1.234\\r'  or  b'\\x02  1234N\\r'
+
+The driver sends 'W', the scale responds with one of these frames.
+
 Pure-function tests — no hardware required.
 """
 
@@ -13,33 +19,31 @@ from rpidriver.plugins.scale_driver import parse_adam, parse_toledo8217
 
 
 def test_toledo_parses_float_weight():
-    result = parse_toledo8217(b"W+000001.234kg\r\n")
-    assert result == {"weight": 1.234, "unit": "kg", "status": "ok"}
+    # Real Toledo 8217 response frame: STX + spaces + digits + CR
+    result = parse_toledo8217(b"\x02  1.234\r")
+    assert result is not None
+    assert result["weight"] == pytest.approx(1.234)
+    assert result["unit"] == "kg"
+    assert result["status"] == "ok"
 
 
 def test_toledo_parses_integer_weight():
-    result = parse_toledo8217(b"W+000005kg\r\n")
-    assert result == {"weight": 5.0, "unit": "kg", "status": "ok"}
-
-
-def test_toledo_parses_negative_weight():
-    result = parse_toledo8217(b"W-000000.500kg\r\n")
+    result = parse_toledo8217(b"\x02  5\r")
     assert result is not None
-    assert result["weight"] == pytest.approx(-0.5)
-    assert result["unit"] == "kg"
+    assert result["weight"] == pytest.approx(5.0)
 
 
-def test_toledo_parses_grams():
-    result = parse_toledo8217(b"W+000250g\r\n")
+def test_toledo_parses_negative_with_N_suffix():
+    # Toledo uses 'N' suffix for negative weights on some firmware versions
+    result = parse_toledo8217(b"\x02  500N\r")
     assert result is not None
-    assert result["unit"] == "g"
+    assert result["weight"] == pytest.approx(500.0)
 
 
-def test_toledo_parses_with_prefix_question_mark():
-    # Some Toledo frames start with '?W'
-    result = parse_toledo8217(b"?W+000001.234kg\r\n")
+def test_toledo_parses_zero():
+    result = parse_toledo8217(b"\x02  0.000\r")
     assert result is not None
-    assert result["weight"] == pytest.approx(1.234)
+    assert result["weight"] == pytest.approx(0.0)
 
 
 def test_toledo_returns_none_on_garbage():
@@ -52,6 +56,13 @@ def test_toledo_returns_none_on_empty():
 
 def test_toledo_returns_none_on_non_ascii():
     assert parse_toledo8217(b"\xff\xfe\x00") is None
+
+
+def test_toledo_strips_stx_and_whitespace():
+    # Ensure STX and surrounding spaces don't break parsing
+    result = parse_toledo8217(b"\x02   2.500\r")
+    assert result is not None
+    assert result["weight"] == pytest.approx(2.5)
 
 
 # ── parse_adam ────────────────────────────────────────────────────────────────

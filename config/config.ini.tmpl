@@ -44,13 +44,17 @@ paper_width = 576
 # Serial port the scale is connected to.
 port = /dev/ttyUSB0
 
-# Baud rate. Toledo 8217 default: 9600. Adam Equipment default: 9600.
-baudrate = 9600
-
-# Protocol parser: toledo8217 | adam
+# Protocol: toledo8217 | adam
+# Serial parameters are set automatically per protocol:
+#   toledo8217  → 9600 baud, 7E1 (7 data bits, Even parity, 1 stop bit)
+#   adam        → 4800 baud, 8N1 (8 data bits, No parity,   1 stop bit)
 protocol = toledo8217
 
-# Serial read timeout in seconds.
+# Override baudrate if your scale is configured differently (optional).
+# Leave commented to use the protocol default.
+# baudrate = 9600
+
+# Serial read/write timeout in seconds.
 timeout = 1.0
 
 

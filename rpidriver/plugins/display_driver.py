@@ -117,11 +117,16 @@ class DisplayDriver(AbstractDriver):
         """Show a welcome message centered on line 1."""
         self.display_text(line1=msg.center(COLS), line2="")
 
+    def stop(self):
+        """Stop the driver and close the serial port (called by plugin loader on shutdown)."""
+        self.close()
+
     def close(self):
-        """Close the serial port."""
+        """Close the serial port and mark status as disconnected."""
         if self._serial and self._serial.is_open:
             self._serial.close()
         self._serial = None
+        self.set_status("disconnected")
 
 
 # ── Plugin registration ───────────────────────────────────────────────────────

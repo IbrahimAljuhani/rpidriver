@@ -59,6 +59,10 @@ class AbstractDriver(ABC):
     def close(self):
         """Close/disconnect from the hardware device."""
 
+    def stop(self):
+        """Stop the driver and release resources. Called by the plugin loader on shutdown."""
+        self.close()
+
 
 class ThreadDriver(AbstractDriver):
     """
