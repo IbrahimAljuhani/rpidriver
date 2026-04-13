@@ -175,7 +175,10 @@ def logs_get():
     GET /api/logs?lines=200
     Return recent log lines as JSON.
     """
-    lines = min(int(request.args.get("lines", 200)), 1000)
+    try:
+        lines = max(1, min(int(request.args.get("lines", 200)), 1000))
+    except (TypeError, ValueError):
+        lines = 200
     try:
         result = subprocess.run(
             [
@@ -227,6 +230,10 @@ def logs_stream():
                 if line:
                     # SSE format: "data: <payload>\n\n"
                     yield f"data: {line}\n\n"
+                # Detect if journalctl died unexpectedly
+                if proc.poll() is not None:
+                    yield "data: (log stream ended — service may have stopped)\n\n"
+                    break
         except GeneratorExit:
             pass
         finally:

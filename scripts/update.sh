@@ -14,7 +14,15 @@ info() { echo -e "${GREEN}[rpidriver]${NC} $*"; }
 [[ $EUID -eq 0 ]] || { echo "Run as root."; exit 1; }
 
 info "Pulling latest source..."
-git -C "$INSTALL_DIR" pull --ff-only
+# Stash any accidental local changes so the pull doesn't fail
+if ! git -C "$INSTALL_DIR" diff --quiet || ! git -C "$INSTALL_DIR" diff --cached --quiet; then
+    info "Local changes detected — stashing before pull..."
+    git -C "$INSTALL_DIR" stash push -m "rpidriver-update-$(date +%Y%m%d-%H%M%S)"
+fi
+git -C "$INSTALL_DIR" pull --ff-only || {
+    echo -e "${RED}[error]${NC} git pull failed. Check your internet connection or resolve conflicts manually."
+    exit 1
+}
 
 info "Updating Python dependencies..."
 "$VENV_DIR/bin/pip" install --upgrade -r "$INSTALL_DIR/requirements.txt"

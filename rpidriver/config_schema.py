@@ -85,10 +85,9 @@ CONFIG_SCHEMA = {
             "type"       : "text",
             "label"      : "Terminal ID (TID)",
             "default"    : "",
-            "placeholder": "12345678",
-            "maxlength"  : 8,
-            "pattern"    : r"\d{8}",
-            "help"       : "8-digit Terminal ID provided by the acquiring bank (Al Rajhi, SNB …).",
+            "placeholder": "12345678 or 1564351801626831",
+            "pattern"    : r"\d{8}|\d{16}",
+            "help"       : "Terminal ID: either the 8-digit bank TID (Al Rajhi, SNB …) or the 16-digit device TID shown on the terminal screen.",
         },
         "port": {
             "type"   : "number",

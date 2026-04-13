@@ -17,13 +17,14 @@
 
 <nav>
   <a class="brand" href="{{ url_for('views.index') }}">RPiDriver</a>
+  {% set ep = request.endpoint %}
   <ul>
-    <li><a href="{{ url_for('views.index') }}">{{ _('Home') }}</a></li>
-    <li><a href="{{ url_for('views.status') }}">{{ _('Status') }}</a></li>
-    <li><a href="{{ url_for('views.config') }}">{{ _('Config') }}</a></li>
-    <li><a href="{{ url_for('views.logs') }}">{{ _('Logs') }}</a></li>
-    <li><a href="{{ url_for('views.system') }}">{{ _('System') }}</a></li>
-    <li><a href="{{ url_for('views.usb_devices') }}">{{ _('USB') }}</a></li>
+    <li><a href="{{ url_for('views.index') }}"       {% if ep == 'views.index'       %}class="active"{% endif %}>{{ _('Home') }}</a></li>
+    <li><a href="{{ url_for('views.status') }}"      {% if ep == 'views.status'      %}class="active"{% endif %}>{{ _('Status') }}</a></li>
+    <li><a href="{{ url_for('views.config') }}"      {% if ep == 'views.config'      %}class="active"{% endif %}>{{ _('Config') }}</a></li>
+    <li><a href="{{ url_for('views.logs') }}"        {% if ep == 'views.logs'        %}class="active"{% endif %}>{{ _('Logs') }}</a></li>
+    <li><a href="{{ url_for('views.system') }}"      {% if ep == 'views.system'      %}class="active"{% endif %}>{{ _('System') }}</a></li>
+    <li><a href="{{ url_for('views.usb_devices') }}" {% if ep == 'views.usb_devices' %}class="active"{% endif %}>{{ _('USB') }}</a></li>
   </ul>
   {% if locale == 'ar' %}
     <a class="lang-toggle" href="{{ url_for('views.set_language', locale='en') }}">English</a>

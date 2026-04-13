@@ -29,7 +29,8 @@ Terminal → Client:
 
 Config keys (under [neoleap_driver] in config.ini):
   neoleap_ip  — IP address of the NeoLeap terminal  (required)
-  terminal_id — 8-digit Terminal ID from the bank    (required)
+  terminal_id — Terminal ID: 8-digit bank TID (Al Rajhi, SNB …)
+                OR 16-digit device TID shown on the terminal screen  (required)
   port        — WebSocket port (default: 7000)
   timeout     — transaction timeout in seconds (default: 90)
 
@@ -143,9 +144,10 @@ class NeoLeapDriver(PaymentTerminalDriver):
 
         if not self._terminal_id:
             errors.append("terminal_id is required")
-        elif not self._terminal_id.isdigit() or len(self._terminal_id) != 8:
+        elif not self._terminal_id.isdigit() or len(self._terminal_id) not in (8, 16):
             errors.append(
-                f"terminal_id {self._terminal_id!r} must be exactly 8 digits"
+                f"terminal_id {self._terminal_id!r} must be 8 digits (bank TID) "
+                f"or 16 digits (device TID shown on terminal screen)"
             )
 
         if errors:
@@ -155,14 +157,51 @@ class NeoLeapDriver(PaymentTerminalDriver):
         elif not _HAS_WEBSOCKET:
             self.set_status("disconnected", "websocket-client not installed")
         else:
-            self.set_status("connected")
+            # Start a background connectivity check so app startup isn't blocked.
+            # Status will update to "connected" or "disconnected" within ~3 s.
+            self.set_status("disconnected", "Checking terminal connectivity…")
             logger.info(
-                "NeoLeapDriver: ready — IP=%s  TID=%s  port=%d  timeout=%ds",
+                "NeoLeapDriver: config OK — IP=%s  TID=%s  port=%d  timeout=%ds",
                 self._neoleap_ip, self._terminal_id, self._port, self._timeout,
             )
+            threading.Thread(
+                target=self._startup_check,
+                daemon=True,
+                name="neoleap-startup",
+            ).start()
 
     def get_device(self):
         return self._ws
+
+    # ── Startup connectivity check ────────────────────────────────────────────
+
+    def _startup_check(self):
+        """
+        Background thread: attempt a TCP connection to the terminal to verify
+        it is reachable before the first payment request.  Updates driver status
+        so the dashboard shows the real connection state immediately on startup.
+        """
+        import socket as _sock
+        try:
+            s = _sock.socket(_sock.AF_INET, _sock.SOCK_STREAM)
+            s.settimeout(3)
+            s.connect((self._neoleap_ip, self._port))
+            s.close()
+            self.set_status("connected")
+            logger.info(
+                "NeoLeapDriver: terminal reachable at %s:%d",
+                self._neoleap_ip, self._port,
+            )
+        except OSError as exc:
+            self.set_status(
+                "disconnected",
+                f"Terminal at {self._neoleap_ip}:{self._port} not reachable ({exc})",
+            )
+            logger.warning(
+                "NeoLeapDriver: terminal not reachable at %s:%d — %s. "
+                "Check neoleap_ip and port in config.ini.",
+                self._neoleap_ip, self._port, exc,
+            )
 
     # ── PaymentTerminalDriver interface ───────────────────────────────────────
 

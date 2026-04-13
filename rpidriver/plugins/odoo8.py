@@ -293,19 +293,12 @@ def serial_read():
             logger.exception("serial_read via serial_driver failed: %s", exc)
             return _jsonrpc_error(str(exc), req_id=req_id)
 
-    # Direct serial read (no serial_driver loaded)
-    if not device:
-        return _jsonrpc_error(
-            "No serial_driver loaded and no 'device' param provided.", req_id=req_id
-        )
-    try:
-        import serial as _serial
-        with _serial.Serial(device, timeout=timeout) as ser:
-            raw = ser.read(size)
-        return _jsonrpc_result({"data": raw.hex(), "status": "ok"}, req_id)
-    except Exception as exc:
-        logger.exception("serial_read direct failed on %s: %s", device, exc)
-        return _jsonrpc_error(str(exc), req_id=req_id)
+    # No serial_driver loaded — reject. Direct device access is intentionally
+    # disabled to prevent unauthorized access to hardware from the network.
+    return _jsonrpc_error(
+        "serial_driver is not loaded. Enable it in config.ini → [rpidriver] drivers.",
+        req_id=req_id,
+    )
 
 
 @bp.route("/serial_write", methods=["POST"])
@@ -349,18 +342,12 @@ def serial_write():
             logger.exception("serial_write via serial_driver failed: %s", exc)
             return _jsonrpc_error(str(exc), req_id=req_id)
 
-    if not device:
-        return _jsonrpc_error(
-            "No serial_driver loaded and no 'device' param provided.", req_id=req_id
-        )
-    try:
-        import serial as _serial
-        with _serial.Serial(device, timeout=timeout) as ser:
-            n = ser.write(raw_bytes)
-        return _jsonrpc_result({"bytes_written": n, "status": "ok"}, req_id)
-    except Exception as exc:
-        logger.exception("serial_write direct failed on %s: %s", device, exc)
-        return _jsonrpc_error(str(exc), req_id=req_id)
+    # No serial_driver loaded — reject. Direct device access is intentionally
+    # disabled to prevent unauthorized access to hardware from the network.
+    return _jsonrpc_error(
+        "serial_driver is not loaded. Enable it in config.ini → [rpidriver] drivers.",
+        req_id=req_id,
+    )
 
 
 # ── Payment terminal endpoints ────────────────────────────────────────────────

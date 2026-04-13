@@ -44,8 +44,10 @@ def system():
     # UDP-socket trick: connecting to an external address (no packet sent)
     # forces the OS to choose the correct outbound interface IP — avoids
     # returning 127.0.x.x that gethostbyname(gethostname()) often gives.
+    # settimeout(2) prevents hanging if the routing table has no default route.
     try:
         _s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        _s.settimeout(2)
         _s.connect(("8.8.8.8", 80))
         local_ip = _s.getsockname()[0]
         _s.close()
@@ -135,6 +137,7 @@ def ssl_generate():
     # Detect the Pi's outbound IP (more reliable than gethostbyname)
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.settimeout(2)
         s.connect(("8.8.8.8", 80))
         pi_ip = s.getsockname()[0]
         s.close()

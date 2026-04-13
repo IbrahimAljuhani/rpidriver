@@ -48,7 +48,13 @@ nav ul a {
   font-size: 0.9rem;
   transition: color 0.15s;
 }
-nav ul a:hover { color: #fff; }
+nav ul a:hover  { color: #fff; }
+nav ul a.active {
+  color: #fff;
+  font-weight: 700;
+  border-bottom: 2px solid rgba(255,255,255,0.75);
+  padding-bottom: 1px;
+}
 
 .lang-toggle {
   background: rgba(255,255,255,0.15);
