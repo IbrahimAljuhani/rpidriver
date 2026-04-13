@@ -1,7 +1,7 @@
 """
 NeoLeap Mada Payment Terminal Driver.
 
-Communicates with a NeoLeap Mada terminal over WebSocket (ws://IP:7000).
+Communicates with a NeoLeap Mada terminal (e.g. N950) over WebSocket.
 Implements the PaymentTerminalDriver interface so all three hw_proxy payment
 endpoints work out of the box:
 
@@ -9,29 +9,43 @@ endpoints work out of the box:
   POST /hw_proxy/payment_terminal_transaction_status  → transaction_status()
   POST /hw_proxy/payment_terminal_transaction_cancel  → cancel()
 
-NeoLeap WebSocket protocol
---------------------------
+NeoLeap WebSocket protocol (confirmed from production device + pos_neoleap)
+---------------------------------------------------------------------------
 Client → Terminal:
   {"Command": "CHECK_STATUS"}
-  {"Command": "SALE", "Amount": "12.50", "TerminalID": "12345678",
-   "AdditionalData": "POS-00042"}
+  {"Command": "SALE", "Amount": "12.50", "AdditionalData": "POS-00042"}
   {"Command": "CANCEL"}
 
-Terminal → Client:
-  {"EventName": "TERMINAL_STATUS",   "TerminalStatus": "READY" | "BUSY" | ...}
-  {"EventName": "TERMINAL_RESPONSE", "JsonResult": {
-      "StatusCode":          "00",        ← 00=approved 01=declined 11=cancelled
-      "ECRReferenceNumber":  "00000001",  ← transaction ID
-      "TransactionAuthCode": "123456",    ← auth code
-      "CardType":            "MADA",
-      "TerminalID":          "12345678",
-  }}
+  Note: TerminalID is NOT sent in the SALE command — the terminal knows its
+  own ID and ignores (or rejects) the field if provided.
+
+Terminal → Client (two possible formats):
+
+  Format A — JSON (simulator / some firmware versions):
+    {"EventName": "TERMINAL_STATUS",   "TerminalStatus": "READY" | "BUSY"}
+    {"EventName": "TERMINAL_RESPONSE", "JsonResult": {
+        "StatusCode":          "00",        ← "00"=approved "01"=declined "11"=cancelled
+        "ECRReferenceNumber":  "00000001",
+        "TransactionAuthCode": "175800",
+    }}
+
+  Format B — Hybrid JSON+XML (N950 production firmware v1.2.5x):
+    {"API_Status":"0", "EventName":"TERMINAL_RESPONSE", <?xml ...>
+      <madaTransactionResult>
+        <Result English="APPROVED"/>         ← or "DECLINED"
+        <ApprovalCode>175800</ApprovalCode>
+        <RRN>329705000047</RRN>
+        <ResponseCode>000</ResponseCode>     ← "000"=approved
+        <TerminalID>8136012001194761</TerminalID>
+      </madaTransactionResult>}
+
+  Format B is not valid JSON. The driver detects it and parses the XML part.
 
 Config keys (under [neoleap_driver] in config.ini):
   neoleap_ip  — IP address of the NeoLeap terminal  (required)
   terminal_id — Terminal ID: 8-digit bank TID (Al Rajhi, SNB …)
                 OR 16-digit device TID shown on the terminal screen  (required)
-  port        — WebSocket port (default: 9998 for N950)
+  port        — WebSocket port (default: 9998 for N950 over WiFi)
   timeout     — transaction timeout in seconds (default: 90)
 
 Registered in drivers{} as "neoleap_driver".
@@ -41,6 +55,7 @@ Requires: pip install websocket-client
 import ipaddress
 import json
 import logging
+import re
 import threading
 
 from rpidriver.plugins.payment_base_driver import PaymentTerminalDriver
@@ -368,11 +383,23 @@ class NeoLeapDriver(PaymentTerminalDriver):
             if not message or not message.strip():
                 logger.debug("NeoLeapDriver: received empty message, ignoring.")
                 return
+
+            # ── Format B detection ────────────────────────────────────────────
+            # Real N950 firmware sends a hybrid JSON+XML string that is NOT
+            # valid JSON.  Detect it before trying json.loads().
+            if '"TERMINAL_RESPONSE"' in message and '<madaTransactionResult>' in message:
+                logger.info("NeoLeapDriver: received XML response (Format B — N950 production)")
+                final = self._parse_xml_response(message)
+                ws.close(); event.set()
+                return
+
+            # ── Format A — proper JSON ────────────────────────────────────────
             try:
                 data = json.loads(message)
             except json.JSONDecodeError as exc:
-                logger.error("NeoLeapDriver: invalid JSON: %s", exc)
-                final = _err(f"JSON parse error: {exc}")
+                logger.error("NeoLeapDriver: unrecognised message format: %s", exc)
+                logger.debug("NeoLeapDriver: raw message was: %s", message[:500])
+                final = _err(f"Unrecognised terminal response: {exc}")
                 ws.close(); event.set(); return
 
             event_name = data.get("EventName", "")
@@ -380,14 +407,16 @@ class NeoLeapDriver(PaymentTerminalDriver):
             if event_name == "TERMINAL_STATUS":
                 terminal_status = data.get("TerminalStatus", "")
                 if terminal_status == "READY":
+                    # TerminalID is NOT included — the N950 knows its own ID
+                    # and the pos_neoleap reference implementation omits it.
                     cmd = {
                         "Command"       : "SALE",
                         "Amount"        : amount,
-                        "TerminalID"    : terminal_id,
                         "AdditionalData": order_id,
                     }
                     logger.info(
-                        "NeoLeapDriver: terminal READY — sending SALE %s", cmd
+                        "NeoLeapDriver: terminal READY — sending SALE amount=%s order=%s",
+                        amount, order_id,
                     )
                     ws.send(json.dumps(cmd))
                 else:
@@ -395,7 +424,7 @@ class NeoLeapDriver(PaymentTerminalDriver):
                     ws.close(); event.set()
 
             elif event_name == "TERMINAL_RESPONSE":
-                final = self._parse_response(data, terminal_id)
+                final = self._parse_json_response(data)
                 ws.close(); event.set()
 
             else:
@@ -418,6 +447,9 @@ class NeoLeapDriver(PaymentTerminalDriver):
                 on_message = on_message,
                 on_error   = on_error,
                 on_close   = on_close,
+                # Some NeoLeap firmware versions require an Origin header that
+                # resembles a browser request (same behaviour as the POS browser).
+                header     = {"Origin": "http://localhost:8069"},
             )
             t = threading.Thread(target=ws_app.run_forever, daemon=True, name="neoleap-ws")
             t.start()
@@ -454,8 +486,19 @@ class NeoLeapDriver(PaymentTerminalDriver):
     # ── Response parser ───────────────────────────────────────────────────────
 
     @staticmethod
-    def _parse_response(data: dict, terminal_id: str) -> dict:
-        """Parse a TERMINAL_RESPONSE from NeoLeap and return a state dict."""
+    def _parse_json_response(data: dict) -> dict:
+        """
+        Parse a Format A (JSON) TERMINAL_RESPONSE from NeoLeap.
+
+        Expected structure:
+          {"EventName": "TERMINAL_RESPONSE", "JsonResult": {
+              "StatusCode":          "00",
+              "ECRReferenceNumber":  "00000001",
+              "TransactionAuthCode": "175800",
+              "CardType":            "MADA",
+              "TerminalID":          "8136012001194761",
+          }}
+        """
         jr          = data.get("JsonResult") or {}
         status_code = str(jr.get("StatusCode", "")).strip()
         label       = _STATUS_MESSAGES.get(status_code, f"StatusCode {status_code}")
@@ -466,7 +509,7 @@ class NeoLeapDriver(PaymentTerminalDriver):
                 "transactionId": jr.get("ECRReferenceNumber", ""),
                 "authCode"     : jr.get("TransactionAuthCode", ""),
                 "cardType"     : jr.get("CardType", ""),
-                "terminalId"   : jr.get("TerminalID", terminal_id),
+                "terminalId"   : jr.get("TerminalID", ""),
                 "statusCode"   : status_code,
                 "message"      : label,
             }
@@ -483,6 +526,63 @@ class NeoLeapDriver(PaymentTerminalDriver):
             "state"     : "error",
             "statusCode": status_code,
             "message"   : label,
+        }
+
+    @staticmethod
+    def _parse_xml_response(message: str) -> dict:
+        """
+        Parse a Format B (hybrid JSON+XML) TERMINAL_RESPONSE from the N950.
+
+        The real N950 firmware (v1.2.5x) sends a string that is NOT valid JSON:
+          {"API_Status":"0", "EventName":"TERMINAL_RESPONSE", <?xml ...>
+            <madaTransactionResult>
+              <Result English="APPROVED"/>
+              <ApprovalCode>175800</ApprovalCode>
+              <RRN>329705000047</RRN>
+              <ResponseCode>000</ResponseCode>
+              <TerminalID>8136012001194761</TerminalID>
+            </madaTransactionResult>}
+
+        StatusCode convention in XML: "000" = approved (3 digits, unlike JSON "00").
+        We normalise the result to the same dict shape as _parse_json_response().
+        """
+        def _find(pattern, default=""):
+            m = re.search(pattern, message, re.IGNORECASE | re.DOTALL)
+            return m.group(1).strip() if m else default
+
+        # Primary approval signal: <Result English="APPROVED" /> or "DECLINED"
+        result_english = _find(r'<Result[^>]+English="([^"]+)"')
+
+        # Numeric response code: "000" = approved in XML format
+        response_code  = _find(r'<ResponseCode[^>]*>([^<]+)</ResponseCode>')
+
+        approval_code  = _find(r'<ApprovalCode[^>]*>([^<]+)</ApprovalCode>')
+        rrn            = _find(r'<RRN[^>]*>([^<]+)</RRN>')
+        terminal_id    = _find(r'<TerminalID[^>]*>([^<]+)</TerminalID>')
+        card_type      = _find(r'<CardType[^>]*>([^<]+)</CardType>')
+
+        approved = (
+            result_english.upper() == "APPROVED"
+            or response_code == "000"
+        )
+
+        if approved:
+            return {
+                "state"        : "accepted",
+                "transactionId": rrn,           # RRN is the transaction reference
+                "authCode"     : approval_code,
+                "cardType"     : card_type,
+                "terminalId"   : terminal_id,
+                "statusCode"   : response_code,
+                "message"      : "Payment approved",
+            }
+
+        # Declined or other non-approved result
+        label = result_english.capitalize() if result_english else f"ResponseCode {response_code}"
+        return {
+            "state"     : "error",
+            "statusCode": response_code,
+            "message"   : label or "Transaction declined",
         }
 
     # ── State TTL reset ───────────────────────────────────────────────────────
