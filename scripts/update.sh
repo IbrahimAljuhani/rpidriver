@@ -20,6 +20,9 @@ info "Updating Python dependencies..."
 "$VENV_DIR/bin/pip" install --upgrade -r "$INSTALL_DIR/requirements.txt"
 "$VENV_DIR/bin/pip" install -e "$INSTALL_DIR"
 
+info "Compiling translation catalogs..."
+"$VENV_DIR/bin/pybabel" compile -d "$INSTALL_DIR/rpidriver/translations"
+
 info "Restarting service..."
 systemctl restart "$SERVICE_NAME"
 

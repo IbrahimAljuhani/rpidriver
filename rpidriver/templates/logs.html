@@ -5,17 +5,14 @@
 
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem;">
   <h2 style="margin:0">{{ _('Live Logs') }}</h2>
-  <div style="display:flex;align-items:center;gap:.75rem;">
+  <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;">
     <label style="display:flex;align-items:center;gap:.4rem;font-size:.85rem;cursor:pointer;">
       <input type="checkbox" id="auto-scroll" checked>
       {{ _('Auto-scroll') }}
     </label>
-    <button class="btn btn-secondary btn-sm" onclick="clearLog()">
-      🗑 {{ _('Clear') }}
-    </button>
-    <button class="btn btn-secondary btn-sm" id="pause-btn" onclick="togglePause()">
-      ⏸ {{ _('Pause') }}
-    </button>
+    <button class="btn btn-secondary btn-sm" onclick="clearLog()">🗑 {{ _('Clear') }}</button>
+    <button class="btn btn-secondary btn-sm" id="pause-btn" onclick="togglePause()">⏸ {{ _('Pause') }}</button>
+    <button class="btn btn-secondary btn-sm" onclick="loadRest()">↻ {{ _('Refresh') }}</button>
     <span id="conn-status" class="badge badge-warning">{{ _('Connecting…') }}</span>
   </div>
 </div>
@@ -26,7 +23,7 @@
     background:#0f1117; color:#d4d4d8;
     font-family:'Courier New',Courier,monospace; font-size:.78rem;
     line-height:1.55;
-    height:calc(100vh - 220px); min-height:300px;
+    height:calc(100vh - 240px); min-height:300px;
     overflow-y:auto; overflow-x:auto;
     white-space:pre; word-break:normal;
     border-radius:8px;
@@ -34,17 +31,15 @@
 </div>
 
 <style>
-.log-line-error   { color: #f87171; }
-.log-line-warning { color: #fbbf24; }
-.log-line-info    { color: #86efac; }
-.log-line-debug   { color: #93c5fd; }
-.btn-sm { padding: .3rem .75rem; font-size: .82rem; }
+.log-error   { color: #f87171; }
+.log-warning { color: #fbbf24; }
+.log-info    { color: #86efac; }
+.log-debug   { color: #93c5fd; }
+.btn-sm { padding:.3rem .75rem; font-size:.82rem; }
 .btn-secondary {
-  background: transparent;
-  border: 1px solid var(--border, #e5e7eb);
-  color: var(--text, #1c1c1e);
+  background:transparent; border:1px solid var(--border,#e5e7eb); color:var(--text,#1c1c1e);
 }
-.btn-secondary:hover { background: var(--surface, #f9fafb); }
+.btn-secondary:hover { background:var(--surface,#f9fafb); }
 </style>
 
 <script>
@@ -53,85 +48,120 @@ const connBadge = document.getElementById('conn-status');
 const pauseBtn  = document.getElementById('pause-btn');
 const autoScroll= document.getElementById('auto-scroll');
 
-let paused = false;
-let es     = null;
-const MAX_LINES = 500;
+let paused    = false;
+let es        = null;
+let sseOk     = false;           // did SSE ever connect successfully?
+let pollTimer = null;
+const MAX_LINES = 600;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-function colorLine(text) {
-  const t = text.toLowerCase();
-  if (t.includes(' error') || t.includes('traceback') || t.includes('exception'))
-    return `<span class="log-line-error">${escHtml(text)}</span>`;
-  if (t.includes('warning') || t.includes('warn'))
-    return `<span class="log-line-warning">${escHtml(text)}</span>`;
-  if (t.includes(' info') || t.includes('[info]'))
-    return `<span class="log-line-info">${escHtml(text)}</span>`;
-  if (t.includes('debug'))
-    return `<span class="log-line-debug">${escHtml(text)}</span>`;
-  return escHtml(text);
-}
-
 function escHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-function appendLine(text) {
-  if (paused) return;
-  const line = document.createElement('div');
-  line.innerHTML = colorLine(text);
-  output.appendChild(line);
-
-  // Trim excess lines
-  while (output.children.length > MAX_LINES) {
-    output.removeChild(output.firstChild);
-  }
-
-  if (autoScroll.checked) {
-    output.scrollTop = output.scrollHeight;
-  }
+function colorLine(text) {
+  const t = text.toLowerCase();
+  if (t.includes('error') || t.includes('traceback') || t.includes('exception') || t.includes('critical'))
+    return `<span class="log-error">${escHtml(text)}</span>`;
+  if (t.includes('warn'))
+    return `<span class="log-warning">${escHtml(text)}</span>`;
+  if (t.includes('info'))
+    return `<span class="log-info">${escHtml(text)}</span>`;
+  if (t.includes('debug'))
+    return `<span class="log-debug">${escHtml(text)}</span>`;
+  return escHtml(text);
 }
 
-// ── SSE connection ────────────────────────────────────────────────────────────
-function connect() {
-  if (es) { es.close(); }
+function appendLine(text) {
+  if (paused || !text.trim()) return;
+  const div = document.createElement('div');
+  div.innerHTML = colorLine(text);
+  output.appendChild(div);
+  while (output.children.length > MAX_LINES) output.removeChild(output.firstChild);
+  if (autoScroll.checked) output.scrollTop = output.scrollHeight;
+}
+
+function setStatus(text, cls) {
+  connBadge.textContent = text;
+  connBadge.className   = 'badge ' + cls;
+}
+
+// ── SSE (primary) ─────────────────────────────────────────────────────────────
+function connectSSE() {
+  if (es) { try { es.close(); } catch(e){} }
 
   es = new EventSource('/api/logs/stream');
 
+  // If SSE doesn't open within 5 s, fall back to REST polling
+  const timeout = setTimeout(() => {
+    if (!sseOk) {
+      es.close();
+      startPoll();
+    }
+  }, 5000);
+
   es.onopen = () => {
-    connBadge.textContent = '{{ _("Live") }}';
-    connBadge.className   = 'badge badge-connected';
+    clearTimeout(timeout);
+    sseOk = true;
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    setStatus('{{ _("Live") }}', 'badge-connected');
   };
 
-  es.onmessage = (e) => {
-    appendLine(e.data);
-  };
+  es.onmessage = (e) => { appendLine(e.data); };
 
   es.onerror = () => {
-    connBadge.textContent = '{{ _("Reconnecting…") }}';
-    connBadge.className   = 'badge badge-warning';
-    // Browser will auto-reconnect SSE; we just update the badge
+    setStatus('{{ _("Reconnecting…") }}', 'badge-warning');
+    // If SSE worked before, let browser auto-reconnect.
+    // If it never connected, switch to REST poll.
+    if (!sseOk) {
+      clearTimeout(timeout);
+      es.close();
+      startPoll();
+    }
   };
+}
+
+// ── REST polling (fallback) ───────────────────────────────────────────────────
+let _lastLines = '';
+
+async function loadRest() {
+  try {
+    const resp = await fetch('/api/logs?lines=200');
+    const data = await resp.json();
+    const text = data.logs || '';
+    if (text === _lastLines) return;           // nothing new
+    _lastLines = text;
+
+    output.innerHTML = '';
+    text.split('\n').forEach(line => appendLine(line));
+  } catch(e) {
+    setStatus('❌ ' + e.message, 'badge-warning');
+  }
+}
+
+function startPoll() {
+  setStatus('{{ _("Polling") }}', 'badge-warning');
+  loadRest();
+  if (!pollTimer) pollTimer = setInterval(loadRest, 4000);
 }
 
 // ── Controls ──────────────────────────────────────────────────────────────────
-function clearLog() {
-  output.innerHTML = '';
-}
+function clearLog() { output.innerHTML = ''; _lastLines = ''; }
 
 function togglePause() {
   paused = !paused;
   pauseBtn.innerHTML = paused ? '▶ {{ _("Resume") }}' : '⏸ {{ _("Pause") }}';
-  pauseBtn.classList.toggle('btn-primary', paused);
+  pauseBtn.classList.toggle('btn-primary',   paused);
   pauseBtn.classList.toggle('btn-secondary', !paused);
 }
 
-// ── Start ─────────────────────────────────────────────────────────────────────
-connect();
+// ── Init ──────────────────────────────────────────────────────────────────────
+connectSSE();
 
-// Reconnect when the tab becomes visible again after being hidden
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden && (!es || es.readyState === EventSource.CLOSED)) {
-    connect();
+  if (!document.hidden) {
+    if (sseOk && es && es.readyState === EventSource.CLOSED) connectSSE();
+    else if (!sseOk && !pollTimer) startPoll();
   }
 });
 </script>

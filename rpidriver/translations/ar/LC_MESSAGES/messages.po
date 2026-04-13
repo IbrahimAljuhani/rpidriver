@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: rpidriver 1.0\n"
 "Report-Msgid-Bugs-To: info@ia.sa\n"
 "POT-Creation-Date: 2024-01-01 00:00+0300\n"
-"PO-Revision-Date: 2024-01-01 00:00+0300\n"
+"PO-Revision-Date: 2025-01-01 00:00+0300\n"
 "Last-Translator: Ibrahim Aljuhani <info@ia.sa>\n"
 "Language: ar\n"
 "Language-Team: Arabic\n"
@@ -16,11 +16,18 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=6; plural=n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 ? 4 : 5;\n"
 
+# ── Navigation ────────────────────────────────────────────────────────────────
 msgid "Home"
 msgstr "الرئيسية"
 
 msgid "Status"
 msgstr "الحالة"
+
+msgid "Config"
+msgstr "الإعدادات"
+
+msgid "Logs"
+msgstr "السجلات"
 
 msgid "System"
 msgstr "النظام"
@@ -31,6 +38,7 @@ msgstr "USB"
 msgid "RPiDriver"
 msgstr "RPiDriver"
 
+# ── Index page ────────────────────────────────────────────────────────────────
 msgid "Smart hardware proxy for Odoo POS — Arabic POS Bridge"
 msgstr "وسيط أجهزة ذكي لـ Odoo POS — جسر نقاط البيع العربي"
 
@@ -70,6 +78,7 @@ msgstr "البروتوكول"
 msgid "Auto-refreshes every 5 seconds."
 msgstr "يتحدث تلقائياً كل 5 ثوانٍ."
 
+# ── Status page ───────────────────────────────────────────────────────────────
 msgid "No drivers loaded. Check config.ini → [rpidriver] drivers."
 msgstr "لا توجد مشغّلات محمّلة. تحقق من config.ini ← [rpidriver] drivers."
 
@@ -85,11 +94,15 @@ msgstr "خطأ"
 msgid "Driver unavailable"
 msgstr "المشغّل غير متاح"
 
+# ── System page ───────────────────────────────────────────────────────────────
 msgid "System Information"
 msgstr "معلومات النظام"
 
 msgid "Hostname"
 msgstr "اسم الجهاز"
+
+msgid "IP Address"
+msgstr "عنوان IP"
 
 msgid "Platform"
 msgstr "المنصة"
@@ -109,6 +122,85 @@ msgstr "غير متاح"
 msgid "N/A (not a Raspberry Pi)"
 msgstr "غير متاح (ليس Raspberry Pi)"
 
+msgid "SSL / HTTPS"
+msgstr "SSL / HTTPS"
+
+msgid "Status"
+msgstr "الحالة"
+
+msgid "Enabled (HTTPS)"
+msgstr "مُفعَّل (HTTPS)"
+
+msgid "Disabled (HTTP only)"
+msgstr "معطّل (HTTP فقط)"
+
+msgid "Certificate"
+msgstr "الشهادة"
+
+msgid "Valid Until"
+msgstr "صالح حتى"
+
+msgid "Download"
+msgstr "تحميل"
+
+msgid "Download Certificate"
+msgstr "تحميل الشهادة"
+
+msgid "Import into Odoo or your browser to trust this server."
+msgstr "استورده في Odoo أو متصفحك للوثوق بهذا الخادم."
+
+msgid "HTTPS is disabled."
+msgstr "HTTPS معطّل."
+
+msgid "Odoo 17+ running on HTTPS cannot connect to an HTTP proxy — the browser blocks mixed-content requests."
+msgstr "لا يمكن لـ Odoo 17+ على HTTPS الاتصال بخادم HTTP — المتصفح يرفض طلبات المحتوى المختلط."
+
+msgid "Generate SSL Certificate"
+msgstr "توليد شهادة SSL"
+
+msgid "Generating…"
+msgstr "جارٍ التوليد…"
+
+msgid "Certificate generated for IP"
+msgstr "تم توليد الشهادة لـ IP"
+
+msgid "Restart RPiDriver to enable HTTPS:"
+msgstr "أعد تشغيل RPiDriver لتفعيل HTTPS:"
+
+msgid "Unknown error"
+msgstr "خطأ غير معروف"
+
+msgid "First-time setup:"
+msgstr "الإعداد الأول:"
+
+msgid "Open"
+msgstr "افتح"
+
+msgid "in your browser and accept the certificate warning once before connecting Odoo POS."
+msgstr "في متصفحك واقبل تحذير الشهادة مرة واحدة قبل توصيل Odoo POS."
+
+msgid "Service Control"
+msgstr "التحكم بالخدمة"
+
+msgid "Restart RPiDriver to apply configuration changes."
+msgstr "أعد تشغيل RPiDriver لتطبيق تغييرات الإعدادات."
+
+msgid "Restart RPiDriver"
+msgstr "إعادة تشغيل RPiDriver"
+
+msgid "or run:"
+msgstr "أو شغّل:"
+
+msgid "Restarting…"
+msgstr "جارٍ إعادة التشغيل…"
+
+msgid "Restarted.  Reconnecting…"
+msgstr "تمت إعادة التشغيل. جارٍ إعادة الاتصال…"
+
+msgid "Failed"
+msgstr "فشل"
+
+# ── USB page ──────────────────────────────────────────────────────────────────
 msgid "Connected USB Devices"
 msgstr "أجهزة USB المتصلة"
 
@@ -127,41 +219,208 @@ msgstr "المنتج"
 msgid "No USB devices found or pyusb not available."
 msgstr "لم يتم العثور على أجهزة USB أو pyusb غير متاح."
 
-msgid "IP Address"
-msgstr "عنوان IP"
+# ── Config page ───────────────────────────────────────────────────────────────
+msgid "Configuration"
+msgstr "الإعدادات"
 
-msgid "SSL / HTTPS"
-msgstr "SSL / HTTPS"
+msgid "Restart required."
+msgstr "إعادة تشغيل مطلوبة."
 
-msgid "Enabled (HTTPS)"
-msgstr "مُفعَّل (HTTPS)"
+msgid "Some changes need a service restart to take effect."
+msgstr "بعض التغييرات تحتاج إعادة تشغيل الخدمة لتفعيلها."
 
-msgid "Disabled (HTTP only)"
-msgstr "معطّل (HTTP فقط)"
+msgid "Restart now"
+msgstr "إعادة التشغيل الآن"
 
-msgid "Certificate"
-msgstr "الشهادة"
+msgid "Save"
+msgstr "حفظ"
 
-msgid "Valid Until"
-msgstr "صالح حتى"
+msgid "Saving…"
+msgstr "جارٍ الحفظ…"
 
-msgid "HTTPS is disabled."
-msgstr "HTTPS معطّل."
+msgid "Saved"
+msgstr "تم الحفظ"
 
-msgid "Odoo 17+ running on HTTPS cannot connect to an HTTP proxy — the browser blocks mixed-content requests."
-msgstr "لا يمكن لـ Odoo 17+ على HTTPS الاتصال بخادم HTTP — المتصفح يرفض طلبات المحتوى المختلط."
+msgid "Save failed"
+msgstr "فشل الحفظ"
 
-msgid "Run"
-msgstr "شغّل"
+msgid "Changes require restart."
+msgstr "التغييرات تتطلب إعادة التشغيل."
 
-msgid "to generate a certificate automatically."
-msgstr "لتوليد شهادة SSL تلقائياً."
+# Config schema — section titles
+msgid "Core"
+msgstr "الأساسي"
 
-msgid "First-time setup:"
-msgstr "الإعداد الأول:"
+msgid "Mada Terminal (NeoLeap)"
+msgstr "طرفية مدى (NeoLeap)"
 
-msgid "Open"
-msgstr "افتح"
+msgid "ESC/POS Printer"
+msgstr "طابعة ESC/POS"
 
-msgid "in your browser and accept the certificate warning once before connecting Odoo POS."
-msgstr "في متصفحك واقبل تحذير الشهادة مرة واحدة قبل توصيل Odoo POS."
+msgid "Scale"
+msgstr "الميزان"
+
+msgid "Customer Display"
+msgstr "شاشة العميل"
+
+msgid "CUPS Network Printer"
+msgstr "طابعة CUPS الشبكية"
+
+# Config schema — field labels
+msgid "Active Drivers"
+msgstr "المشغّلات النشطة"
+
+msgid "Listen Address"
+msgstr "عنوان الاستماع"
+
+msgid "Port"
+msgstr "المنفذ"
+
+msgid "Debug Mode"
+msgstr "وضع التشخيص"
+
+msgid "Terminal IP Address"
+msgstr "عنوان IP الطرفية"
+
+msgid "Terminal ID (TID)"
+msgstr "رقم الطرفية (TID)"
+
+msgid "WebSocket Port"
+msgstr "منفذ WebSocket"
+
+msgid "Transaction Timeout (s)"
+msgstr "مهلة المعاملة (ثانية)"
+
+msgid "State Reset Delay (s)"
+msgstr "تأخير إعادة الضبط (ثانية)"
+
+msgid "Paper Width"
+msgstr "عرض الورق"
+
+msgid "Thank You Message"
+msgstr "رسالة الشكر"
+
+msgid "Arabic Font Path"
+msgstr "مسار الخط العربي"
+
+msgid "Serial Port"
+msgstr "منفذ المسلسل"
+
+msgid "Weight Unit"
+msgstr "وحدة الوزن"
+
+msgid "Read Timeout (s)"
+msgstr "مهلة القراءة (ثانية)"
+
+msgid "Baud Rate"
+msgstr "معدل نقل البيانات"
+
+msgid "CUPS Host"
+msgstr "خادم CUPS"
+
+msgid "CUPS Port"
+msgstr "منفذ CUPS"
+
+msgid "Printer Name"
+msgstr "اسم الطابعة"
+
+msgid "Backend"
+msgstr "الخلفية"
+
+# Config schema — help texts
+msgid "Hardware drivers to load at startup.  Changes require restart."
+msgstr "مشغّلات الأجهزة للتحميل عند بدء التشغيل. التغييرات تتطلب إعادة التشغيل."
+
+msgid "IP to bind to.  Use 0.0.0.0 for all interfaces."
+msgstr "عنوان IP للربط. استخدم 0.0.0.0 لجميع الواجهات."
+
+msgid "TCP port for the RPiDriver server."
+msgstr "منفذ TCP لخادم RPiDriver."
+
+msgid "Enable Flask debug mode.  Never use in production."
+msgstr "تفعيل وضع تشخيص Flask. لا تستخدمه في الإنتاج أبداً."
+
+msgid "IP address of the NeoLeap terminal on the local network."
+msgstr "عنوان IP لطرفية NeoLeap على الشبكة المحلية."
+
+msgid "8-digit Terminal ID provided by the acquiring bank (Al Rajhi, SNB …)."
+msgstr "رقم الطرفية المكوّن من 8 أرقام من البنك (الراجحي، SNB ...)."
+
+msgid "NeoLeap WebSocket port.  Do not change unless instructed by NeoLeap."
+msgstr "منفذ WebSocket لـ NeoLeap. لا تغيّر إلا بتعليمات NeoLeap."
+
+msgid "Seconds to wait for the customer to complete a payment."
+msgstr "ثوانٍ الانتظار لإتمام العميل عملية الدفع."
+
+msgid "Seconds before a completed transaction auto-resets to idle."
+msgstr "ثوانٍ قبل إعادة ضبط المعاملة المكتملة تلقائياً."
+
+msgid "Paper width in dots.  80 mm printers use 576; 58 mm use 384."
+msgstr "عرض الورق بالنقاط. طابعات 80 مم تستخدم 576؛ 58 مم تستخدم 384."
+
+msgid "Text printed at the bottom of every receipt."
+msgstr "النص المطبوع في أسفل كل إيصال."
+
+msgid "Full path to a TrueType Arabic font.  Leave empty to use the bundled font."
+msgstr "المسار الكامل لخط TrueType عربي. اتركه فارغاً لاستخدام الخط المرفق."
+
+msgid "Serial device path for the scale."
+msgstr "مسار جهاز المسلسل للميزان."
+
+msgid "Serial protocol used by the scale model."
+msgstr "بروتوكول المسلسل المستخدم في الميزان."
+
+msgid "Unit displayed in Odoo POS."
+msgstr "الوحدة المعروضة في Odoo POS."
+
+msgid "Serial read timeout per polling cycle."
+msgstr "مهلة قراءة المسلسل لكل دورة استطلاع."
+
+msgid "Serial device path for the customer display (USB-CDC)."
+msgstr "مسار جهاز المسلسل لشاشة العميل (USB-CDC)."
+
+msgid "Serial baud rate.  Most 2×20 displays use 9600."
+msgstr "معدل نقل المسلسل. معظم الشاشات 2×20 تستخدم 9600."
+
+msgid "Hostname or IP of the CUPS server."
+msgstr "اسم المضيف أو عنوان IP لخادم CUPS."
+
+msgid "CUPS server port (default: 631)."
+msgstr "منفذ خادم CUPS (الافتراضي: 631)."
+
+msgid "Name of the printer queue in CUPS."
+msgstr "اسم طابور الطابعة في CUPS."
+
+msgid "Printing backend.  Auto selects pycups when available."
+msgstr "خلفية الطباعة. تلقائي يختار pycups عند توفره."
+
+# ── Logs page ─────────────────────────────────────────────────────────────────
+msgid "Live Logs"
+msgstr "السجلات المباشرة"
+
+msgid "Auto-scroll"
+msgstr "التمرير التلقائي"
+
+msgid "Clear"
+msgstr "مسح"
+
+msgid "Pause"
+msgstr "إيقاف مؤقت"
+
+msgid "Resume"
+msgstr "استئناف"
+
+msgid "Refresh"
+msgstr "تحديث"
+
+msgid "Connecting…"
+msgstr "جارٍ الاتصال…"
+
+msgid "Live"
+msgstr "مباشر"
+
+msgid "Reconnecting…"
+msgstr "جارٍ إعادة الاتصال…"
+
+msgid "Polling"
+msgstr "استطلاع"

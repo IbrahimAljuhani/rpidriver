@@ -51,6 +51,12 @@ if ! id "$RUN_USER" &>/dev/null; then
             --groups lp,plugdev,dialout "$RUN_USER"
 fi
 
+# Add to systemd-journal group so the dashboard can stream live logs
+if getent group systemd-journal &>/dev/null; then
+    usermod -aG systemd-journal "$RUN_USER"
+    info "Added $RUN_USER to systemd-journal group (live log streaming)."
+fi
+
 # ── Clone / update source ──────────────────────────────────────────────────
 # Full clone (not --depth=1) so that `update.sh` can git pull cleanly
 if [[ -d "$INSTALL_DIR/.git" ]]; then

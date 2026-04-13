@@ -41,9 +41,14 @@ def status():
 
 @bp.route("/system")
 def system():
-    import socket
+    # UDP-socket trick: connecting to an external address (no packet sent)
+    # forces the OS to choose the correct outbound interface IP — avoids
+    # returning 127.0.x.x that gethostbyname(gethostname()) often gives.
     try:
-        local_ip = socket.gethostbyname(socket.gethostname())
+        _s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        _s.connect(("8.8.8.8", 80))
+        local_ip = _s.getsockname()[0]
+        _s.close()
     except Exception:
         local_ip = "127.0.0.1"
 
@@ -54,6 +59,9 @@ def system():
         "python": platform.python_version(),
         "arch": platform.machine(),
     }
+
+    # 1) Try vcgencmd (Raspberry Pi firmware tool)
+    # 2) Fall back to /sys/class/thermal/thermal_zone0/temp (works on all Linux SBCs)
     try:
         result = subprocess.run(
             ["vcgencmd", "measure_temp"], capture_output=True, text=True, timeout=2
@@ -61,9 +69,14 @@ def system():
         if result.returncode == 0 and result.stdout.strip():
             info["temperature"] = result.stdout.strip()
         else:
+            raise OSError("vcgencmd returned no data")
+    except (OSError, subprocess.TimeoutExpired, FileNotFoundError):
+        try:
+            with open("/sys/class/thermal/thermal_zone0/temp") as _f:
+                _milli = int(_f.read().strip())
+                info["temperature"] = f"{_milli / 1000:.1f} °C"
+        except OSError:
             info["temperature"] = _("N/A")
-    except OSError:
-        info["temperature"] = _("N/A (not a Raspberry Pi)")
 
     ssl_info = _get_ssl_info()
     return render_template("system.html", info=info, ssl=ssl_info)

@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: rpidriver 1.0\n"
 "Report-Msgid-Bugs-To: info@ia.sa\n"
 "POT-Creation-Date: 2024-01-01 00:00+0300\n"
-"PO-Revision-Date: 2024-01-01 00:00+0300\n"
+"PO-Revision-Date: 2025-01-01 00:00+0300\n"
 "Last-Translator: Ibrahim Aljuhani <info@ia.sa>\n"
 "Language: en\n"
 "Language-Team: English\n"
@@ -16,11 +16,18 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
+# ── Navigation ────────────────────────────────────────────────────────────────
 msgid "Home"
 msgstr "Home"
 
 msgid "Status"
 msgstr "Status"
+
+msgid "Config"
+msgstr "Config"
+
+msgid "Logs"
+msgstr "Logs"
 
 msgid "System"
 msgstr "System"
@@ -31,6 +38,7 @@ msgstr "USB"
 msgid "RPiDriver"
 msgstr "RPiDriver"
 
+# ── Index page ────────────────────────────────────────────────────────────────
 msgid "Smart hardware proxy for Odoo POS — Arabic POS Bridge"
 msgstr "Smart hardware proxy for Odoo POS — Arabic POS Bridge"
 
@@ -70,6 +78,7 @@ msgstr "Protocol"
 msgid "Auto-refreshes every 5 seconds."
 msgstr "Auto-refreshes every 5 seconds."
 
+# ── Status page ───────────────────────────────────────────────────────────────
 msgid "No drivers loaded. Check config.ini → [rpidriver] drivers."
 msgstr "No drivers loaded. Check config.ini → [rpidriver] drivers."
 
@@ -85,11 +94,15 @@ msgstr "Error"
 msgid "Driver unavailable"
 msgstr "Driver unavailable"
 
+# ── System page ───────────────────────────────────────────────────────────────
 msgid "System Information"
 msgstr "System Information"
 
 msgid "Hostname"
 msgstr "Hostname"
+
+msgid "IP Address"
+msgstr "IP Address"
 
 msgid "Platform"
 msgstr "Platform"
@@ -109,6 +122,82 @@ msgstr "N/A"
 msgid "N/A (not a Raspberry Pi)"
 msgstr "N/A (not a Raspberry Pi)"
 
+msgid "SSL / HTTPS"
+msgstr "SSL / HTTPS"
+
+msgid "Enabled (HTTPS)"
+msgstr "Enabled (HTTPS)"
+
+msgid "Disabled (HTTP only)"
+msgstr "Disabled (HTTP only)"
+
+msgid "Certificate"
+msgstr "Certificate"
+
+msgid "Valid Until"
+msgstr "Valid Until"
+
+msgid "Download"
+msgstr "Download"
+
+msgid "Download Certificate"
+msgstr "Download Certificate"
+
+msgid "Import into Odoo or your browser to trust this server."
+msgstr "Import into Odoo or your browser to trust this server."
+
+msgid "HTTPS is disabled."
+msgstr "HTTPS is disabled."
+
+msgid "Odoo 17+ running on HTTPS cannot connect to an HTTP proxy — the browser blocks mixed-content requests."
+msgstr "Odoo 17+ running on HTTPS cannot connect to an HTTP proxy — the browser blocks mixed-content requests."
+
+msgid "Generate SSL Certificate"
+msgstr "Generate SSL Certificate"
+
+msgid "Generating…"
+msgstr "Generating…"
+
+msgid "Certificate generated for IP"
+msgstr "Certificate generated for IP"
+
+msgid "Restart RPiDriver to enable HTTPS:"
+msgstr "Restart RPiDriver to enable HTTPS:"
+
+msgid "Unknown error"
+msgstr "Unknown error"
+
+msgid "First-time setup:"
+msgstr "First-time setup:"
+
+msgid "Open"
+msgstr "Open"
+
+msgid "in your browser and accept the certificate warning once before connecting Odoo POS."
+msgstr "in your browser and accept the certificate warning once before connecting Odoo POS."
+
+msgid "Service Control"
+msgstr "Service Control"
+
+msgid "Restart RPiDriver to apply configuration changes."
+msgstr "Restart RPiDriver to apply configuration changes."
+
+msgid "Restart RPiDriver"
+msgstr "Restart RPiDriver"
+
+msgid "or run:"
+msgstr "or run:"
+
+msgid "Restarting…"
+msgstr "Restarting…"
+
+msgid "Restarted.  Reconnecting…"
+msgstr "Restarted.  Reconnecting…"
+
+msgid "Failed"
+msgstr "Failed"
+
+# ── USB page ──────────────────────────────────────────────────────────────────
 msgid "Connected USB Devices"
 msgstr "Connected USB Devices"
 
@@ -127,41 +216,208 @@ msgstr "Product"
 msgid "No USB devices found or pyusb not available."
 msgstr "No USB devices found or pyusb not available."
 
-msgid "IP Address"
-msgstr "IP Address"
+# ── Config page ───────────────────────────────────────────────────────────────
+msgid "Configuration"
+msgstr "Configuration"
 
-msgid "SSL / HTTPS"
-msgstr "SSL / HTTPS"
+msgid "Restart required."
+msgstr "Restart required."
 
-msgid "Enabled (HTTPS)"
-msgstr "Enabled (HTTPS)"
+msgid "Some changes need a service restart to take effect."
+msgstr "Some changes need a service restart to take effect."
 
-msgid "Disabled (HTTP only)"
-msgstr "Disabled (HTTP only)"
+msgid "Restart now"
+msgstr "Restart now"
 
-msgid "Certificate"
-msgstr "Certificate"
+msgid "Save"
+msgstr "Save"
 
-msgid "Valid Until"
-msgstr "Valid Until"
+msgid "Saving…"
+msgstr "Saving…"
 
-msgid "HTTPS is disabled."
-msgstr "HTTPS is disabled."
+msgid "Saved"
+msgstr "Saved"
 
-msgid "Odoo 17+ running on HTTPS cannot connect to an HTTP proxy — the browser blocks mixed-content requests."
-msgstr "Odoo 17+ running on HTTPS cannot connect to an HTTP proxy — the browser blocks mixed-content requests."
+msgid "Save failed"
+msgstr "Save failed"
 
-msgid "Run"
-msgstr "Run"
+msgid "Changes require restart."
+msgstr "Changes require restart."
 
-msgid "to generate a certificate automatically."
-msgstr "to generate a certificate automatically."
+# Config schema — section titles
+msgid "Core"
+msgstr "Core"
 
-msgid "First-time setup:"
-msgstr "First-time setup:"
+msgid "Mada Terminal (NeoLeap)"
+msgstr "Mada Terminal (NeoLeap)"
 
-msgid "Open"
-msgstr "Open"
+msgid "ESC/POS Printer"
+msgstr "ESC/POS Printer"
 
-msgid "in your browser and accept the certificate warning once before connecting Odoo POS."
-msgstr "in your browser and accept the certificate warning once before connecting Odoo POS."
+msgid "Scale"
+msgstr "Scale"
+
+msgid "Customer Display"
+msgstr "Customer Display"
+
+msgid "CUPS Network Printer"
+msgstr "CUPS Network Printer"
+
+# Config schema — field labels
+msgid "Active Drivers"
+msgstr "Active Drivers"
+
+msgid "Listen Address"
+msgstr "Listen Address"
+
+msgid "Port"
+msgstr "Port"
+
+msgid "Debug Mode"
+msgstr "Debug Mode"
+
+msgid "Terminal IP Address"
+msgstr "Terminal IP Address"
+
+msgid "Terminal ID (TID)"
+msgstr "Terminal ID (TID)"
+
+msgid "WebSocket Port"
+msgstr "WebSocket Port"
+
+msgid "Transaction Timeout (s)"
+msgstr "Transaction Timeout (s)"
+
+msgid "State Reset Delay (s)"
+msgstr "State Reset Delay (s)"
+
+msgid "Paper Width"
+msgstr "Paper Width"
+
+msgid "Thank You Message"
+msgstr "Thank You Message"
+
+msgid "Arabic Font Path"
+msgstr "Arabic Font Path"
+
+msgid "Serial Port"
+msgstr "Serial Port"
+
+msgid "Weight Unit"
+msgstr "Weight Unit"
+
+msgid "Read Timeout (s)"
+msgstr "Read Timeout (s)"
+
+msgid "Baud Rate"
+msgstr "Baud Rate"
+
+msgid "CUPS Host"
+msgstr "CUPS Host"
+
+msgid "CUPS Port"
+msgstr "CUPS Port"
+
+msgid "Printer Name"
+msgstr "Printer Name"
+
+msgid "Backend"
+msgstr "Backend"
+
+# Config schema — help texts
+msgid "Hardware drivers to load at startup.  Changes require restart."
+msgstr "Hardware drivers to load at startup.  Changes require restart."
+
+msgid "IP to bind to.  Use 0.0.0.0 for all interfaces."
+msgstr "IP to bind to.  Use 0.0.0.0 for all interfaces."
+
+msgid "TCP port for the RPiDriver server."
+msgstr "TCP port for the RPiDriver server."
+
+msgid "Enable Flask debug mode.  Never use in production."
+msgstr "Enable Flask debug mode.  Never use in production."
+
+msgid "IP address of the NeoLeap terminal on the local network."
+msgstr "IP address of the NeoLeap terminal on the local network."
+
+msgid "8-digit Terminal ID provided by the acquiring bank (Al Rajhi, SNB …)."
+msgstr "8-digit Terminal ID provided by the acquiring bank (Al Rajhi, SNB …)."
+
+msgid "NeoLeap WebSocket port.  Do not change unless instructed by NeoLeap."
+msgstr "NeoLeap WebSocket port.  Do not change unless instructed by NeoLeap."
+
+msgid "Seconds to wait for the customer to complete a payment."
+msgstr "Seconds to wait for the customer to complete a payment."
+
+msgid "Seconds before a completed transaction auto-resets to idle."
+msgstr "Seconds before a completed transaction auto-resets to idle."
+
+msgid "Paper width in dots.  80 mm printers use 576; 58 mm use 384."
+msgstr "Paper width in dots.  80 mm printers use 576; 58 mm use 384."
+
+msgid "Text printed at the bottom of every receipt."
+msgstr "Text printed at the bottom of every receipt."
+
+msgid "Full path to a TrueType Arabic font.  Leave empty to use the bundled font."
+msgstr "Full path to a TrueType Arabic font.  Leave empty to use the bundled font."
+
+msgid "Serial device path for the scale."
+msgstr "Serial device path for the scale."
+
+msgid "Serial protocol used by the scale model."
+msgstr "Serial protocol used by the scale model."
+
+msgid "Unit displayed in Odoo POS."
+msgstr "Unit displayed in Odoo POS."
+
+msgid "Serial read timeout per polling cycle."
+msgstr "Serial read timeout per polling cycle."
+
+msgid "Serial device path for the customer display (USB-CDC)."
+msgstr "Serial device path for the customer display (USB-CDC)."
+
+msgid "Serial baud rate.  Most 2×20 displays use 9600."
+msgstr "Serial baud rate.  Most 2×20 displays use 9600."
+
+msgid "Hostname or IP of the CUPS server."
+msgstr "Hostname or IP of the CUPS server."
+
+msgid "CUPS server port (default: 631)."
+msgstr "CUPS server port (default: 631)."
+
+msgid "Name of the printer queue in CUPS."
+msgstr "Name of the printer queue in CUPS."
+
+msgid "Printing backend.  Auto selects pycups when available."
+msgstr "Printing backend.  Auto selects pycups when available."
+
+# ── Logs page ─────────────────────────────────────────────────────────────────
+msgid "Live Logs"
+msgstr "Live Logs"
+
+msgid "Auto-scroll"
+msgstr "Auto-scroll"
+
+msgid "Clear"
+msgstr "Clear"
+
+msgid "Pause"
+msgstr "Pause"
+
+msgid "Resume"
+msgstr "Resume"
+
+msgid "Refresh"
+msgstr "Refresh"
+
+msgid "Connecting…"
+msgstr "Connecting…"
+
+msgid "Live"
+msgstr "Live"
+
+msgid "Reconnecting…"
+msgstr "Reconnecting…"
+
+msgid "Polling"
+msgstr "Polling"

@@ -105,8 +105,53 @@
   <div class="ssl-notice ssl-info">
     <strong>💡 {{ _('First-time setup:') }}</strong>
     {{ _('Open') }} <code>https://{{ info.ip }}:8069</code>
-    {{ _('in your browser and accept the certificate warning once, then download and import the certificate into Odoo.') }}
+    {{ _('in your browser and accept the certificate warning once before connecting Odoo POS.') }}
   </div>
   {% endif %}
 </div>
+
+{# ── Service control ── #}
+<div class="card">
+  <h2>{{ _('Service Control') }}</h2>
+  <p style="font-size:.88rem;color:var(--text-muted,#6b7280);margin-bottom:1rem;">
+    {{ _('Restart RPiDriver to apply configuration changes.') }}
+  </p>
+  <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+    <button id="restart-btn" class="btn btn-primary" onclick="restartRpidriver()">
+      🔄 {{ _('Restart RPiDriver') }}
+    </button>
+    <span id="restart-status" style="font-size:.875rem;"></span>
+  </div>
+  <p style="margin-top:.75rem;font-size:.78rem;color:var(--text-muted,#6b7280);">
+    {{ _('or run:') }} <code>sudo systemctl restart rpidriver</code>
+  </p>
+</div>
+
+<script>
+async function restartRpidriver() {
+  const btn = document.getElementById('restart-btn');
+  const el  = document.getElementById('restart-status');
+  btn.disabled  = true;
+  el.style.color = '';
+  el.textContent = '{{ _("Restarting…") }}';
+
+  try {
+    const resp = await fetch('/api/service/restart', { method: 'POST' });
+    const data = await resp.json();
+    if (data.success) {
+      el.style.color  = '#16a34a';
+      el.textContent  = '✅ {{ _("Restarted.  Reconnecting…") }}';
+      setTimeout(() => location.reload(), 4000);
+    } else {
+      el.style.color  = '#dc2626';
+      el.textContent  = '❌ ' + (data.error || '{{ _("Failed") }}');
+      btn.disabled = false;
+    }
+  } catch (err) {
+    el.style.color  = '#dc2626';
+    el.textContent  = '❌ ' + err.message;
+    btn.disabled = false;
+  }
+}
+</script>
 {% endblock %}
