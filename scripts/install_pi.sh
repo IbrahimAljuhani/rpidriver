@@ -66,6 +66,13 @@ info "Creating Python virtualenv..."
 python3 -m venv "$VENV_DIR"
 "$VENV_DIR/bin/pip" install --upgrade pip wheel
 "$VENV_DIR/bin/pip" install -r "$INSTALL_DIR/requirements.txt"
+
+# websocket-client is required by neoleap_driver (NeoLeap Mada terminal).
+# Installed separately so a missing package doesn't fail the core install.
+info "Installing websocket-client (required for NeoLeap Mada terminal)..."
+"$VENV_DIR/bin/pip" install "websocket-client>=1.6" || \
+    warning "websocket-client install failed — NeoLeap driver will not work. Run manually: pip install websocket-client"
+
 "$VENV_DIR/bin/pip" install -e "$INSTALL_DIR"
 
 # ── Compile translation catalogs ───────────────────────────────────────────
@@ -81,6 +88,31 @@ else
     info "Existing config found — skipping."
 fi
 chown -R "$RUN_USER:$RUN_USER" "$CONFIG_DIR"
+
+# ── SSL certificate ────────────────────────────────────────────────────────
+info "Setting up SSL certificate..."
+SSL_DIR="$CONFIG_DIR/ssl"
+mkdir -p "$SSL_DIR"
+
+if [[ ! -f "$SSL_DIR/cert.pem" ]]; then
+    info "Generating self-signed SSL certificate (valid 10 years)..."
+    PI_IP=$(hostname -I | awk '{print $1}')
+    openssl req -x509 \
+        -newkey rsa:2048 \
+        -keyout "$SSL_DIR/key.pem" \
+        -out    "$SSL_DIR/cert.pem" \
+        -days   3650 \
+        -nodes \
+        -subj   "/C=SA/O=RPiDriver/CN=rpidriver" \
+        -addext "subjectAltName=IP:${PI_IP},DNS:rpidriver.local" \
+        2>/dev/null
+    chmod 600 "$SSL_DIR/key.pem"
+    chmod 644 "$SSL_DIR/cert.pem"
+    chown -R "$RUN_USER:$RUN_USER" "$SSL_DIR"
+    info "Certificate generated: $SSL_DIR/cert.pem (IP: $PI_IP)"
+else
+    info "Existing SSL certificate found — skipping generation."
+fi
 
 # ── udev rules ─────────────────────────────────────────────────────────────
 info "Installing udev rules..."

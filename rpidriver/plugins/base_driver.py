@@ -3,13 +3,51 @@ Base driver classes for RPiDriver plugins.
 
 AbstractDriver  — synchronous base class every plugin inherits from.
 ThreadDriver    — adds a background worker thread for hardware polling.
+
+Utilities
+---------
+check(func)     — decorator that returns an error-status dict when the driver
+                  is not available, preventing 500 errors when hardware is absent.
 """
 
 import logging
 import threading
 from abc import ABC, abstractmethod
+from functools import wraps
 
 logger = logging.getLogger(__name__)
+
+
+# ── check() decorator ─────────────────────────────────────────────────────────
+
+
+def check(func):
+    """
+    Decorator for driver methods that require the hardware to be available.
+
+    If ``self.is_available()`` returns False, the decorated method is skipped
+    and an error-status dict is returned instead.  This prevents 500 errors
+    (and ugly tracebacks) when a device is absent or its library is not installed.
+
+    Usage::
+
+        class MyDriver(AbstractDriver):
+            @check
+            def print_receipt(self, data):
+                ...  # only runs when connected
+    """
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        if not self.is_available():
+            logger.warning(
+                "[%s] %s called but driver is not available (status=%s).",
+                getattr(self, "name", "?"),
+                func.__name__,
+                getattr(self, "_status", {}).get("status", "unknown"),
+            )
+            return {"status": "error", "messages": ["Driver not available"]}
+        return func(self, *args, **kwargs)
+    return wrapper
 
 
 class AbstractDriver(ABC):
@@ -26,6 +64,10 @@ class AbstractDriver(ABC):
         self._status = {"status": "disconnected", "messages": []}
 
     # ── Public API ────────────────────────────────────────────────────────
+
+    def is_available(self) -> bool:
+        """Return True if the driver is connected and ready to accept commands."""
+        return self._status.get("status") == "connected"
 
     def get_status(self) -> dict:
         """Return a status dict copy (messages list is not shared with internal state)."""

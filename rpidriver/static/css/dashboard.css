@@ -131,6 +131,25 @@ footer a { color: var(--primary); text-decoration: none; }
 .quick-label { font-weight: 600; color: var(--text); }
 .quick-desc  { color: var(--muted); font-size: 0.85rem; }
 
+/* ── SSL notice boxes ── */
+.ssl-notice {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+.ssl-warn {
+  background: #fef3c7;
+  border-inline-start: 4px solid var(--warning);
+  color: #92400e;
+}
+.ssl-info {
+  background: #eff6ff;
+  border-inline-start: 4px solid #3b82f6;
+  color: #1e40af;
+}
+
 /* ── Responsive nav ── */
 @media (max-width: 640px) {
   nav { flex-wrap: wrap; gap: 0.5rem; padding: 0.75rem 1rem; }

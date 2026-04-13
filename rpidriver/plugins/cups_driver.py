@@ -1,15 +1,26 @@
 """
 CUPS network printing driver.
 
-Sends print jobs to a CUPS server (local or remote) using the IPP protocol
-via the `requests` library.  No native CUPS bindings required.
+Two backends are supported and selected automatically at import time:
+
+  pycups  — native Python binding for libcups (``pip install pycups``).
+            More reliable; supports all CUPS features and printer options.
+            Only available on Linux with libcups2-dev installed.
+
+  IPP     — manual IPP 2.0 over HTTP via the ``requests`` library.
+            Works on any OS without native dependencies (default fallback).
+
+The active backend is logged at startup.  To force the IPP backend even when
+pycups is installed, set ``cups_backend = ipp`` in ``[cups_driver]`` config.
 
 Registered in drivers{} as "cups_driver".
 """
 
 import itertools
 import logging
+import os
 import struct
+import tempfile
 import threading
 
 import requests
@@ -17,6 +28,17 @@ import requests
 from rpidriver.plugins.base_driver import AbstractDriver
 
 logger = logging.getLogger(__name__)
+
+# ── Optional pycups backend ───────────────────────────────────────────────────
+
+try:
+    import cups as _cups_lib  # type: ignore[import]
+    _PYCUPS_AVAILABLE = True
+    logger.debug("CupsDriver: pycups available — will prefer native backend.")
+except ImportError:
+    _cups_lib = None
+    _PYCUPS_AVAILABLE = False
+    logger.debug("CupsDriver: pycups not installed — using IPP fallback.")
 
 # IPP operation codes
 IPP_OP_PRINT_JOB = 0x0002
@@ -79,6 +101,17 @@ class CupsDriver(AbstractDriver):
         self._cups_host = cfg.get("cups_host", "localhost")
         self._cups_port = int(cfg.get("cups_port", 631))
         self._printer_name = cfg.get("printer_name", "Receipt_Printer")
+
+        # Choose backend: pycups if available and not forced to ipp
+        forced = cfg.get("cups_backend", "auto").lower()
+        if forced == "ipp":
+            self._backend = "ipp"
+        elif _PYCUPS_AVAILABLE:
+            self._backend = "pycups"
+        else:
+            self._backend = "ipp"
+        logger.info("CupsDriver: using %s backend.", self._backend)
+
         # Serialise print jobs — one at a time to avoid IPP race conditions
         self._lock = threading.Lock()
         self._check_connection()
@@ -117,21 +150,57 @@ class CupsDriver(AbstractDriver):
 
     def print_raw(self, data: bytes, job_name: str = "rpidriver-job"):
         """Send raw bytes (ESC/POS) to the CUPS printer queue."""
-        ipp_body = _build_ipp_print_job(self._printer_uri, job_name, data)
         with self._lock:
-            try:
-                resp = requests.post(
-                    self._ipp_url,
-                    data=ipp_body,
-                    headers={"Content-Type": "application/ipp"},
-                    timeout=_PRINT_TIMEOUT,
-                )
-                resp.raise_for_status()
-                logger.info("CupsDriver: job '%s' submitted.", job_name)
-            except requests.RequestException as exc:
-                self.set_status("error", str(exc))
-                logger.exception("CupsDriver: print failed: %s", exc)
-                raise
+            if self._backend == "pycups":
+                self._print_raw_pycups(data, job_name)
+            else:
+                self._print_raw_ipp(data, job_name)
+
+    # ── Backend implementations ───────────────────────────────────────────
+
+    def _print_raw_ipp(self, data: bytes, job_name: str):
+        """Send raw bytes via manual IPP over HTTP (requests library)."""
+        ipp_body = _build_ipp_print_job(self._printer_uri, job_name, data)
+        try:
+            resp = requests.post(
+                self._ipp_url,
+                data=ipp_body,
+                headers={"Content-Type": "application/ipp"},
+                timeout=_PRINT_TIMEOUT,
+            )
+            resp.raise_for_status()
+            logger.info("CupsDriver[ipp]: job '%s' submitted.", job_name)
+        except requests.RequestException as exc:
+            self.set_status("error", str(exc))
+            logger.exception("CupsDriver[ipp]: print failed: %s", exc)
+            raise
+
+    def _print_raw_pycups(self, data: bytes, job_name: str):
+        """Send raw bytes via pycups (libcups native binding)."""
+        tmp_path = None
+        try:
+            # pycups requires a file path — write to a temp file
+            fd, tmp_path = tempfile.mkstemp(suffix=".bin", prefix="rpidriver-")
+            with os.fdopen(fd, "wb") as f:
+                f.write(data)
+            conn = _cups_lib.Connection(
+                host=self._cups_host, port=self._cups_port
+            )
+            job_id = conn.printFile(
+                self._printer_name,
+                tmp_path,
+                job_name,
+                {"raw": ""},      # send as raw — no filter
+            )
+            logger.info("CupsDriver[pycups]: job '%s' submitted (id=%s).", job_name, job_id)
+            self.set_status("connected")
+        except Exception as exc:
+            self.set_status("error", str(exc))
+            logger.exception("CupsDriver[pycups]: print failed: %s", exc)
+            raise
+        finally:
+            if tmp_path and os.path.exists(tmp_path):
+                os.unlink(tmp_path)
 
     def print_text(self, text: str, job_name: str = "rpidriver-text"):
         """Print plain text via CUPS."""

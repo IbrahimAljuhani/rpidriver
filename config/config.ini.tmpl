@@ -16,11 +16,30 @@ port = 8069
 # Set to true only for local development — never in production.
 debug = false
 
+# ── SSL / HTTPS ───────────────────────────────────────────────────────────────
+# Odoo 17+ running on HTTPS requires the IoT proxy to also serve HTTPS.
+# Without SSL, the browser blocks all requests (mixed-content policy).
+#
+# If ssl_cert and ssl_key are left blank, RPiDriver auto-detects:
+#   /etc/rpidriver/ssl/cert.pem  and  /etc/rpidriver/ssl/key.pem
+# (generated automatically by install_pi.sh — no manual action needed).
+#
+# To use a custom certificate, uncomment and set the paths below:
+# ssl_cert = /etc/rpidriver/ssl/cert.pem
+# ssl_key  = /etc/rpidriver/ssl/key.pem
+
 # ── Plugin loader ─────────────────────────────────────────────────────────────
 # Comma-separated list of plugin module names to load.
-# Available: escpos_driver, scale_driver, display_driver, cups_driver
+# Available: escpos_driver, scale_driver, display_driver, cups_driver, neoleap_driver
 # The odoo8 (hw_proxy) blueprint is always loaded regardless of this list.
+#
+# Examples:
+#   Printer + Scale only (default):
 drivers = escpos_driver, scale_driver
+#   With Mada terminal (NeoLeap):
+# drivers = escpos_driver, scale_driver, neoleap_driver
+#   Full setup (all hardware):
+# drivers = escpos_driver, scale_driver, display_driver, neoleap_driver
 
 
 [escpos_driver]
@@ -57,6 +76,13 @@ protocol = toledo8217
 # Serial read/write timeout in seconds.
 timeout = 1.0
 
+# Weight display unit sent to Odoo POS.
+# The driver always reads in kg internally; this setting converts the value
+# before it is returned to Odoo.
+# Valid values: kg | g | lb | oz
+# Default: kg
+unit = kg
+
 
 [display_driver]
 # Serial port for the customer display (USB-CDC shows as /dev/ttyACM0).
@@ -75,3 +101,34 @@ cups_port = 631
 
 # Name of the printer queue in CUPS.
 printer_name = Receipt_Printer
+
+# Preferred print backend: auto | pycups | ipp
+# auto   — uses pycups if installed (pip install pycups), falls back to IPP
+# pycups — native libcups (requires: sudo apt install libcups2-dev)
+# ipp    — manual IPP over HTTP via requests (no extra dependencies)
+# cups_backend = auto
+
+
+[neoleap_driver]
+# ── NeoLeap Mada Payment Terminal ─────────────────────────────────────────────
+# Requires: pip install websocket-client
+#
+# IP address of the NeoLeap terminal on the local network.
+# The terminal must be reachable from this Raspberry Pi.
+neoleap_ip = 192.168.1.100
+
+# 8-digit Terminal ID assigned by the acquiring bank (e.g. Al Rajhi, SNB).
+# Printed on the terminal configuration receipt or provided by the bank.
+terminal_id = 12345678
+
+# WebSocket port used by the NeoLeap app (default: 7000 — do not change).
+port = 7000
+
+# Transaction timeout in seconds.
+# The terminal must complete the payment within this window or it is cancelled.
+timeout = 90
+
+# Seconds before a terminal result (accepted/cancelled/error) is auto-reset to
+# "idle", allowing the next transaction to start without a driver restart.
+# Increase this if your cashiers need more time to acknowledge payment results.
+# state_ttl = 30

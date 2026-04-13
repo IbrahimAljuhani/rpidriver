@@ -3,6 +3,7 @@ Web interface views for RPiDriver dashboard.
 """
 
 import logging
+import os
 import platform
 import subprocess
 
@@ -38,8 +39,15 @@ def status():
 
 @bp.route("/system")
 def system():
+    import socket
+    try:
+        local_ip = socket.gethostbyname(socket.gethostname())
+    except Exception:
+        local_ip = "127.0.0.1"
+
     info = {
         "hostname": platform.node(),
+        "ip": local_ip,
         "platform": platform.platform(),
         "python": platform.python_version(),
         "arch": platform.machine(),
@@ -54,7 +62,39 @@ def system():
             info["temperature"] = _("N/A")
     except OSError:
         info["temperature"] = _("N/A (not a Raspberry Pi)")
-    return render_template("system.html", info=info)
+
+    ssl_info = _get_ssl_info()
+    return render_template("system.html", info=info, ssl=ssl_info)
+
+
+def _get_ssl_info() -> dict:
+    """
+    Read SSL certificate information for display in the system dashboard.
+    Checks the config-defined path first, then the default install location.
+    """
+    from rpidriver import get_config
+    config = get_config()
+
+    cert_path = config.get("rpidriver", "ssl_cert", fallback="").strip()
+    if not cert_path:
+        cert_path = "/etc/rpidriver/ssl/cert.pem"
+
+    if not os.path.exists(cert_path):
+        return {"enabled": False, "cert_path": cert_path, "expires": None}
+
+    # Read certificate expiry via openssl (always available on Linux)
+    expires = _("N/A")
+    try:
+        result = subprocess.run(
+            ["openssl", "x509", "-in", cert_path, "-noout", "-enddate"],
+            capture_output=True, text=True, timeout=3,
+        )
+        if result.returncode == 0:
+            expires = result.stdout.strip().replace("notAfter=", "")
+    except OSError:
+        pass  # openssl not available (Windows dev env)
+
+    return {"enabled": True, "cert_path": cert_path, "expires": expires}
 
 
 @bp.route("/usb_devices")

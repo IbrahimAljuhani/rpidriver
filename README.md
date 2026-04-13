@@ -63,6 +63,7 @@ RPiDriver is the answer: a single `curl` command turns a $35 Raspberry Pi into a
 | **Serial Scale Support** | Mettler Toledo 8217 (7E1) and Adam Equipment (8N1) protocols |
 | **Customer Display** | Bixolon BCD-1000/1100, Epson OCD300 — 2×20 LCD over USB-CDC |
 | **CUPS Network Printing** | Send jobs to shared CUPS printers over the network via IPP |
+| **HTTPS / SSL** | Auto-generated self-signed certificate — required for Odoo 17+ |
 | **Plugin Architecture** | Enable only the drivers you need via a single config line |
 | **ARM64 Native** | Built and tested on Raspberry Pi 3B+, 4, and 5 |
 | **systemd Service** | Auto-start on boot, crash recovery, secret key management |
@@ -154,6 +155,9 @@ RPiDriver exposes a local Flask server on port `8069`. Odoo connects to it exact
 | `/hw_proxy/scale_read` | POST | Read current weight |
 | `/hw_proxy/default_printer_action` | POST | Print receipt / open cashbox (Odoo 17–19) |
 | `/hw_proxy/print_receipt` | POST | Legacy print endpoint (Odoo 13–16) |
+| `/hw_proxy/open_cashbox` | POST | Dedicated cash drawer (Odoo 13–16) |
+| `/hw_proxy/send_text_customer_display` | POST | Show text on customer display |
+| `/hw_proxy/log` | POST | Receive and log POS client messages |
 
 ---
 
@@ -175,10 +179,12 @@ The installer will:
 
 ```bash
 # After install:
-sudo nano /etc/rpidriver/config.ini   # edit your hardware config
+sudo nano /etc/rpidriver/config.ini     # edit your hardware config
 sudo systemctl start rpidriver
-# Open http://[your-pi-ip]:8069
+# Open https://[your-pi-ip]:8069
 ```
+
+> **SSL Note:** The installer auto-generates a self-signed certificate and enables HTTPS automatically. Before connecting Odoo POS, open `https://[pi-ip]:8069` in your browser and accept the certificate warning once. This is required because Odoo 17+ runs on HTTPS and the browser blocks connections to HTTP devices (mixed-content policy).
 
 ### Development Install
 
@@ -260,6 +266,7 @@ printer_name = Receipt_Printer
 - [x] One-command installer (`install_pi.sh`)
 - [x] systemd service with secret key management
 - [x] udev rules for all device types
+- [x] SSL / HTTPS with auto-generated self-signed certificate
 - [x] `v1.0.0` — Initial public release
 - [ ] Debian package for Ubuntu 24.04 ARM64
 - [ ] RPiDriver Pro — Web config panel

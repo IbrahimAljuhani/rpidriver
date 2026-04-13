@@ -126,3 +126,42 @@ msgstr "المنتج"
 
 msgid "No USB devices found or pyusb not available."
 msgstr "لم يتم العثور على أجهزة USB أو pyusb غير متاح."
+
+msgid "IP Address"
+msgstr "عنوان IP"
+
+msgid "SSL / HTTPS"
+msgstr "SSL / HTTPS"
+
+msgid "Enabled (HTTPS)"
+msgstr "مُفعَّل (HTTPS)"
+
+msgid "Disabled (HTTP only)"
+msgstr "معطّل (HTTP فقط)"
+
+msgid "Certificate"
+msgstr "الشهادة"
+
+msgid "Valid Until"
+msgstr "صالح حتى"
+
+msgid "HTTPS is disabled."
+msgstr "HTTPS معطّل."
+
+msgid "Odoo 17+ running on HTTPS cannot connect to an HTTP proxy — the browser blocks mixed-content requests."
+msgstr "لا يمكن لـ Odoo 17+ على HTTPS الاتصال بخادم HTTP — المتصفح يرفض طلبات المحتوى المختلط."
+
+msgid "Run"
+msgstr "شغّل"
+
+msgid "to generate a certificate automatically."
+msgstr "لتوليد شهادة SSL تلقائياً."
+
+msgid "First-time setup:"
+msgstr "الإعداد الأول:"
+
+msgid "Open"
+msgstr "افتح"
+
+msgid "in your browser and accept the certificate warning once before connecting Odoo POS."
+msgstr "في متصفحك واقبل تحذير الشهادة مرة واحدة قبل توصيل Odoo POS."

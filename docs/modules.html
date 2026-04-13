@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RPiDriver — Compatible Modules</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    /* ── Design tokens (matches RPiDriver dashboard) ── */
+    :root {
+      --primary   : #1a7f64;
+      --primary-dk: #145f4a;
+      --bg        : #f5f7fa;
+      --surface   : #ffffff;
+      --text      : #1c1c1e;
+      --muted     : #6b7280;
+      --border    : #e5e7eb;
+      --success   : #16a34a;
+      --warning   : #d97706;
+      --info      : #2563eb;
+      --radius    : 8px;
+      --shadow    : 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Cairo', 'Segoe UI', system-ui, sans-serif;
+      background : var(--bg);
+      color      : var(--text);
+      min-height : 100vh;
+      line-height: 1.6;
+    }
+
+    /* ── Nav ── */
+    nav {
+      background: var(--primary);
+      color      : #fff;
+      padding    : 0.75rem 2rem;
+      display    : flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    .nav-brand {
+      display    : flex;
+      align-items: center;
+      gap        : 0.6rem;
+      text-decoration: none;
+      color      : #fff;
+    }
+    .nav-brand svg { flex-shrink: 0; }
+    .nav-brand-name  { font-size: 1.15rem; font-weight: 700; }
+    .nav-brand-sub   { font-size: 0.78rem; opacity: .75; }
+    .nav-links { display: flex; gap: 1.5rem; list-style: none; }
+    .nav-links a {
+      color: rgba(255,255,255,.85);
+      text-decoration: none;
+      font-size: .875rem;
+      transition: color .15s;
+    }
+    .nav-links a:hover { color: #fff; }
+
+    /* ── Hero ── */
+    .hero {
+      background : linear-gradient(135deg, var(--primary) 0%, var(--primary-dk) 100%);
+      color      : #fff;
+      padding    : 3.5rem 2rem 3rem;
+      text-align : center;
+    }
+    .hero h1 { font-size: 2rem; font-weight: 700; margin-bottom: .5rem; }
+    .hero p  { font-size: 1.05rem; opacity: .85; max-width: 560px; margin: 0 auto 1.5rem; }
+    .hero-badges { display: flex; justify-content: center; gap: .75rem; flex-wrap: wrap; }
+    .badge {
+      display    : inline-flex;
+      align-items: center;
+      gap        : .35rem;
+      padding    : .3rem .85rem;
+      border-radius: 999px;
+      font-size  : .78rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .badge-light    { background: rgba(255,255,255,.15); color: #fff; border: 1px solid rgba(255,255,255,.3); }
+    .badge-white    { background: #fff; color: var(--primary); }
+
+    /* ── Main container ── */
+    .container { max-width: 1100px; margin: 0 auto; padding: 2.5rem 1.5rem; }
+
+    /* ── Section header ── */
+    .section-header {
+      display        : flex;
+      align-items    : center;
+      justify-content: space-between;
+      margin-bottom  : 1.25rem;
+      flex-wrap      : wrap;
+      gap            : .75rem;
+    }
+    .section-title {
+      font-size  : 1.25rem;
+      font-weight: 700;
+      color      : var(--text);
+    }
+    .section-count {
+      font-size  : .8rem;
+      color      : var(--muted);
+      background : var(--border);
+      padding    : .2rem .6rem;
+      border-radius: 999px;
+    }
+
+    /* ── Table card ── */
+    .table-card {
+      background   : var(--surface);
+      border-radius: var(--radius);
+      box-shadow   : var(--shadow);
+      overflow     : hidden;
+      border       : 1px solid var(--border);
+    }
+
+    table { width: 100%; border-collapse: collapse; }
+    thead { background: #f9fafb; }
+    th {
+      padding    : .85rem 1.25rem;
+      text-align : left;
+      font-size  : .75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color      : var(--muted);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    td {
+      padding      : 1rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f9fafb; }
+
+    /* ── Module name link ── */
+    .module-link {
+      display    : inline-flex;
+      align-items: center;
+      gap        : .45rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size  : .88rem;
+      font-weight: 500;
+      color      : var(--primary);
+      text-decoration: none;
+      transition : color .15s;
+    }
+    .module-link:hover { color: var(--primary-dk); text-decoration: underline; }
+    .module-link svg   { opacity: .6; flex-shrink: 0; }
+
+    /* ── Hardware tags ── */
+    .hw-tags { display: flex; flex-wrap: wrap; gap: .35rem; }
+    .hw-tag {
+      font-size    : .75rem;
+      padding      : .15rem .55rem;
+      border-radius: 4px;
+      background   : #f3f4f6;
+      color        : #374151;
+      font-weight  : 500;
+      white-space  : nowrap;
+    }
+
+    /* ── Odoo version pills ── */
+    .odoo-versions { display: flex; flex-wrap: wrap; gap: .35rem; }
+    .odoo-pill {
+      font-size    : .72rem;
+      padding      : .15rem .5rem;
+      border-radius: 4px;
+      font-weight  : 600;
+      white-space  : nowrap;
+    }
+    .odoo-stable   { background: #dcfce7; color: #166534; }
+    .odoo-testing  { background: #fef9c3; color: #854d0e; }
+    .odoo-planned  { background: #f3f4f6; color: #6b7280; }
+
+    /* ── Status badge ── */
+    .status-badge {
+      display    : inline-flex;
+      align-items: center;
+      gap        : .35rem;
+      font-size  : .78rem;
+      font-weight: 600;
+      padding    : .25rem .7rem;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    .status-badge::before { content: ''; width: 7px; height: 7px; border-radius: 50%; }
+    .status-stable   { background: #dcfce7; color: #166534; }
+    .status-stable::before   { background: #16a34a; }
+    .status-beta     { background: #fef9c3; color: #854d0e; }
+    .status-beta::before     { background: #d97706; }
+    .status-planned  { background: #f3f4f6; color: #6b7280; }
+    .status-planned::before  { background: #9ca3af; }
+
+    /* ── Details column ── */
+    .details-text {
+      font-size : .83rem;
+      color     : var(--muted);
+      max-width : 280px;
+      line-height: 1.5;
+    }
+
+    /* ── Info cards strip ── */
+    .info-strip {
+      display              : grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap                  : 1rem;
+      margin-top           : 2rem;
+    }
+    .info-card {
+      background   : var(--surface);
+      border       : 1px solid var(--border);
+      border-radius: var(--radius);
+      padding      : 1.25rem 1.5rem;
+      box-shadow   : var(--shadow);
+    }
+    .info-card-icon { font-size: 1.5rem; margin-bottom: .5rem; }
+    .info-card-title { font-weight: 700; margin-bottom: .35rem; font-size: .95rem; }
+    .info-card-text  { font-size: .83rem; color: var(--muted); }
+    .info-card a     { color: var(--primary); text-decoration: none; }
+    .info-card a:hover { text-decoration: underline; }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding   : 1.5rem 2rem;
+      text-align: center;
+      font-size : .82rem;
+      color     : var(--muted);
+      margin-top: 2.5rem;
+    }
+    footer a { color: var(--primary); text-decoration: none; }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      nav { padding: .75rem 1rem; }
+      .nav-links { display: none; }
+      .hero { padding: 2.5rem 1rem 2rem; }
+      .hero h1 { font-size: 1.5rem; }
+      th, td { padding: .75rem 1rem; }
+      .details-text { max-width: 180px; }
+    }
+    @media (max-width: 540px) {
+      table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Navigation ── -->
+<nav>
+  <a class="nav-brand" href="https://ia.sa">
+    <!-- Pi icon -->
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="28" height="28" rx="6" fill="rgba(255,255,255,.15)"/>
+      <text x="14" y="20" text-anchor="middle" font-family="serif" font-size="16" fill="#fff">π</text>
+    </svg>
+    <span>
+      <div class="nav-brand-name">RPiDriver</div>
+      <div class="nav-brand-sub">ia.sa/rpidriver</div>
+    </span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="https://github.com/IbrahimAljuhani/rpidriver">GitHub</a></li>
+    <li><a href="https://ia.sa/rpidriver/docs">Docs</a></li>
+    <li><a href="https://ia.sa">ia.sa</a></li>
+  </ul>
+</nav>
+
+<!-- ── Hero ── -->
+<div class="hero">
+  <h1>Compatible Odoo Modules</h1>
+  <p>Plug-and-play Odoo modules designed to work with RPiDriver — no IoT Box, no Enterprise licence required.</p>
+  <div class="hero-badges">
+    <span class="badge badge-light">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+      No IoT Box
+    </span>
+    <span class="badge badge-light">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+      Community &amp; Enterprise
+    </span>
+    <span class="badge badge-light">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+      Odoo 16 / 17 / 18 / 19
+    </span>
+    <span class="badge badge-white">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+      Open Source · LGPL-3
+    </span>
+  </div>
+</div>
+
+<!-- ── Main content ── -->
+<div class="container">
+
+  <!-- Module table -->
+  <div class="section-header">
+    <span class="section-title">Module Registry</span>
+    <span class="section-count">1 module</span>
+  </div>
+
+  <div class="table-card">
+    <table>
+      <thead>
+        <tr>
+          <th>Module</th>
+          <th>Hardware</th>
+          <th>Odoo</th>
+          <th>Status</th>
+          <th>Details</th>
+        </tr>
+      </thead>
+      <tbody>
+
+        <!-- ia_mada_rpidriver -->
+        <tr>
+          <td>
+            <a class="module-link"
+               href="https://github.com/IbrahimAljuhani/ia_mada_rpidriver"
+               target="_blank"
+               rel="noopener noreferrer">
+              <!-- GitHub icon -->
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+              </svg>
+              ia_mada_rpidriver
+            </a>
+          </td>
+          <td>
+            <div class="hw-tags">
+              <span class="hw-tag">NeoLeap</span>
+              <span class="hw-tag">مدى</span>
+            </div>
+          </td>
+          <td>
+            <div class="odoo-versions">
+              <span class="odoo-pill odoo-stable">16.0</span>
+              <span class="odoo-pill odoo-stable">17.0</span>
+              <span class="odoo-pill odoo-stable">18.0</span>
+              <span class="odoo-pill odoo-stable">19.0</span>
+            </div>
+          </td>
+          <td>
+            <span class="status-badge status-stable">Stable</span>
+          </td>
+          <td>
+            <p class="details-text">
+              Mada payment terminal integration via NeoLeap WebSocket protocol.
+              Includes Terminal ID support, bilingual UI (AR/EN), and manual approval fallback.
+            </p>
+          </td>
+        </tr>
+
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Info cards -->
+  <div class="info-strip">
+
+    <div class="info-card">
+      <div class="info-card-icon">⚙️</div>
+      <div class="info-card-title">RPiDriver Core</div>
+      <div class="info-card-text">
+        The hardware proxy running on Raspberry Pi.
+        All modules in this registry require RPiDriver.
+        <br><br>
+        <a href="https://github.com/IbrahimAljuhani/rpidriver">
+          View on GitHub →
+        </a>
+      </div>
+    </div>
+
+    <div class="info-card">
+      <div class="info-card-icon">📦</div>
+      <div class="info-card-title">Installation</div>
+      <div class="info-card-text">
+        Each module is a standard Odoo addon.
+        Copy to your addons path and install via
+        <code style="font-family:monospace;font-size:.8rem;background:#f3f4f6;padding:.1rem .3rem;border-radius:3px">
+          -u module_name
+        </code>
+        or the Apps menu.
+      </div>
+    </div>
+
+    <div class="info-card">
+      <div class="info-card-icon">🇸🇦</div>
+      <div class="info-card-title">Saudi Market Focus</div>
+      <div class="info-card-text">
+        Built for the Saudi Arabian market — Mada payments,
+        Arabic RTL printing, ZATCA compliance.
+        All modules include full Arabic UI.
+      </div>
+    </div>
+
+    <div class="info-card">
+      <div class="info-card-icon">🔒</div>
+      <div class="info-card-title">License</div>
+      <div class="info-card-text">
+        All modules are released under
+        <a href="https://www.gnu.org/licenses/lgpl-3.0.html">LGPL-3</a>.
+        Free to use with both Odoo Community and Enterprise editions.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Footer ── -->
+<footer>
+  <strong><a href="https://ia.sa">ia.sa</a></strong> &nbsp;·&nbsp;
+  RPiDriver Compatible Modules &nbsp;·&nbsp;
+  <a href="https://github.com/IbrahimAljuhani/rpidriver">GitHub</a> &nbsp;·&nbsp;
+  LGPL-3 &nbsp;·&nbsp;
+  Built for the Saudi market 🇸🇦
+</footer>
+
+</body>
+</html>

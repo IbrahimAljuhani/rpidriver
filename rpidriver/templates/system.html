@@ -7,11 +7,54 @@
   <table>
     <tbody>
       <tr><th>{{ _('Hostname') }}</th><td>{{ info.hostname }}</td></tr>
+      <tr><th>{{ _('IP Address') }}</th><td><code>{{ info.ip }}</code></td></tr>
       <tr><th>{{ _('Platform') }}</th><td>{{ info.platform }}</td></tr>
       <tr><th>{{ _('Python') }}</th><td>{{ info.python }}</td></tr>
       <tr><th>{{ _('Architecture') }}</th><td>{{ info.arch }}</td></tr>
       <tr><th>{{ _('CPU Temperature') }}</th><td>{{ info.temperature }}</td></tr>
     </tbody>
   </table>
+</div>
+
+<div class="card">
+  <h2>{{ _('SSL / HTTPS') }}</h2>
+  <table>
+    <tbody>
+      <tr>
+        <th>{{ _('Status') }}</th>
+        <td>
+          {% if ssl.enabled %}
+            <span class="badge badge-connected">{{ _('Enabled (HTTPS)') }}</span>
+          {% else %}
+            <span class="badge badge-warning">{{ _('Disabled (HTTP only)') }}</span>
+          {% endif %}
+        </td>
+      </tr>
+      <tr>
+        <th>{{ _('Certificate') }}</th>
+        <td><code>{{ ssl.cert_path }}</code></td>
+      </tr>
+      {% if ssl.enabled and ssl.expires %}
+      <tr>
+        <th>{{ _('Valid Until') }}</th>
+        <td>{{ ssl.expires }}</td>
+      </tr>
+      {% endif %}
+    </tbody>
+  </table>
+
+  {% if not ssl.enabled %}
+  <div class="ssl-notice ssl-warn">
+    <strong>⚠️ {{ _('HTTPS is disabled.') }}</strong><br>
+    {{ _('Odoo 17+ running on HTTPS cannot connect to an HTTP proxy — the browser blocks mixed-content requests.') }}<br>
+    {{ _('Run') }} <code>install_pi.sh</code> {{ _('to generate a certificate automatically.') }}
+  </div>
+  {% else %}
+  <div class="ssl-notice ssl-info">
+    <strong>💡 {{ _('First-time setup:') }}</strong>
+    {{ _('Open') }} <code>https://{{ info.ip }}:8069</code>
+    {{ _('in your browser and accept the certificate warning once before connecting Odoo POS.') }}
+  </div>
+  {% endif %}
 </div>
 {% endblock %}

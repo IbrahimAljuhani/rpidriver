@@ -213,6 +213,6 @@ def _needs_image_rendering(text: str) -> bool:
         0x0600 <= ord(c) < 0x0700
         or 0x0750 <= ord(c) < 0x0780
         or 0xFB50 <= ord(c) < 0xFE00
-        or 0xFE70 <= ord(c) < 0xFF00
+        or 0xFE70 <= ord(c) <= 0xFEFF
         for c in text
     )

@@ -52,7 +52,10 @@ class DisplayDriver(AbstractDriver):
     def _connect(self):
         try:
             self._serial = serial.Serial(
-                port=self._port, baudrate=self._baudrate, timeout=1
+                port=self._port,
+                baudrate=self._baudrate,
+                timeout=1,
+                write_timeout=1,  # Prevent indefinite block if display freezes
             )
             self._write_raw(INIT)
             self.set_status("connected")

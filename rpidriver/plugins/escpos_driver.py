@@ -10,6 +10,7 @@ Registered in drivers{} as "escpos_driver".
 """
 
 import logging
+import queue
 import threading
 
 import usb.core
@@ -152,7 +153,24 @@ class EscposDriver(AbstractDriver):
         )
         # 42 chars for 80mm paper, 32 for 58mm
         self._cols = 42 if self._paper_width >= 576 else 32
+
+        # ── Print queue: serialises concurrent print requests ─────────────
+        # Odoo POS may fire multiple print requests simultaneously (e.g. receipt
+        # + cashbox pulse).  The queue ensures USB writes never overlap, which
+        # would corrupt the output or raise a USBError.
+        self._print_queue: queue.Queue = queue.Queue()
+        self._queue_thread = threading.Thread(
+            target=self._process_queue,
+            name="rpidriver-print-queue",
+            daemon=True,
+        )
+
+        # Connect to hardware first — queue thread starts after so it never
+        # races with an uninitialised device handle.
         self._connect()
+
+        self._queue_thread.start()
+        logger.info("EscposDriver: print queue started.")
 
     # ── AbstractDriver ────────────────────────────────────────────────────
 
@@ -224,6 +242,7 @@ class EscposDriver(AbstractDriver):
     # ── Low-level write ───────────────────────────────────────────────────
 
     def _write(self, data: bytes):
+        """Write raw bytes to the USB endpoint (called from the queue thread)."""
         with self._lock:
             if self._endpoint_out is None:
                 self._connect()
@@ -231,41 +250,92 @@ class EscposDriver(AbstractDriver):
                 raise IOError("Printer not connected")
             self._endpoint_out.write(data)
 
-    # ── High-level API ────────────────────────────────────────────────────
+    # ── Print queue ───────────────────────────────────────────────────────
+
+    def _process_queue(self):
+        """
+        Background thread: drain the print queue one job at a time.
+
+        Serialising all USB writes via a queue prevents concurrent access that
+        would corrupt the print output or raise a usb.core.USBError.
+        A sentinel value of ``None`` shuts the thread down cleanly on close().
+        """
+        while True:
+            job = self._print_queue.get()
+            if job is None:          # sentinel — shut down
+                self._print_queue.task_done()
+                break
+            func, args = job
+            try:
+                func(*args)
+            except Exception as exc:
+                logger.exception("EscposDriver: print job failed: %s", exc)
+                self.set_status("error", str(exc))
+            finally:
+                self._print_queue.task_done()
+
+    def _enqueue(self, func, *args):
+        """Add a print job to the queue (non-blocking, returns immediately)."""
+        self._print_queue.put((func, args))
+
+    # ── High-level API (public — non-blocking, enqueued) ──────────────────
 
     def print_receipt(self, receipt_data: str | dict | list):
         """
-        Print an Odoo POS receipt.
+        Queue an Odoo POS receipt for printing.
 
         Accepts:
           - dict  : Odoo receipt object (orderlines, totals, company, etc.)
           - str   : plain text (Arabic lines rendered as bitmaps)
           - list  : pre-split lines
+
+        Returns immediately; the job is printed in the background queue thread.
         """
+        self._enqueue(self._do_print_receipt, receipt_data)
+
+    def print_image_receipt(self, receipt_b64: str):
+        """
+        Queue a base64 JPEG receipt from Odoo 17/18/19 POS.
+
+        Returns immediately; the job is processed in the background queue thread.
+        """
+        self._enqueue(self._do_print_image_receipt, receipt_b64)
+
+    def open_cashbox(self):
+        """Queue a cash drawer open pulse (ESC p)."""
+        self._enqueue(self._write, CASHBOX_PULSE)
+
+    def print_text(self, text: str):
+        """Queue raw text bytes for printing (Latin only — no Arabic reshaping)."""
+        self._enqueue(self._write, INIT + text.encode("cp437", errors="replace") + LF)
+
+    def cut(self):
+        """Queue a partial cut command."""
+        self._enqueue(self._write, LF * 3 + CUT_PARTIAL)
+
+    # ── Synchronous internals (called only from queue thread) ─────────────
+
+    def _do_print_receipt(self, receipt_data: str | dict | list):
         from rpidriver.plugins.arabic_escpos import render_receipt_lines
 
         if isinstance(receipt_data, dict):
             lines = _format_receipt(receipt_data, cols=self._cols, thank_you=self._thank_you)
-            cut = True
         elif isinstance(receipt_data, list):
             lines = receipt_data
-            cut = True
         else:
             lines = str(receipt_data).splitlines()
-            cut = True
 
         payload = (
             INIT
             + render_receipt_lines(
                 lines, width_px=self._paper_width, font_path=self._font_path
             )
+            + LF * 3
+            + CUT_PARTIAL
         )
-        if cut:
-            payload += LF * 3 + CUT_PARTIAL
-
         self._write(payload)
 
-    def print_image_receipt(self, receipt_b64: str):
+    def _do_print_image_receipt(self, receipt_b64: str):
         """
         Print a receipt received from Odoo 17/18/19 POS.
 
@@ -300,20 +370,17 @@ class EscposDriver(AbstractDriver):
         payload = INIT + image_to_escpos_raster(im) + LF * 3 + CUT_PARTIAL
         self._write(payload)
 
-    def open_cashbox(self):
-        """Send a cash drawer open pulse (ESC p)."""
-        self._write(CASHBOX_PULSE)
-
-    def print_text(self, text: str):
-        """Print raw text bytes (Latin only — no Arabic reshaping)."""
-        self._write(INIT + text.encode("cp437", errors="replace") + LF)
-
-    def cut(self):
-        """Send a partial cut command."""
-        self._write(LF * 3 + CUT_PARTIAL)
-
     def close(self):
-        """Release USB resources held by the device handle."""
+        """
+        Drain the print queue, then release USB resources.
+
+        Sends a sentinel None to the queue thread so it exits cleanly before
+        the USB device handle is disposed.
+        """
+        # Signal queue thread to stop and wait for it
+        self._print_queue.put(None)
+        self._queue_thread.join(timeout=10)
+
         if self._device is not None:
             try:
                 usb.util.dispose_resources(self._device)
