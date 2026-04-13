@@ -92,8 +92,8 @@ CONFIG_SCHEMA = {
         "port": {
             "type"   : "number",
             "label"  : "WebSocket Port",
-            "default": "7000",
-            "help"   : "NeoLeap WebSocket port.  Do not change unless instructed by NeoLeap.",
+            "default": "9998",
+            "help"   : "NeoLeap WebSocket port.  N950 uses 9998.  Do not change unless instructed by NeoLeap.",
         },
         "timeout": {
             "type"   : "number",

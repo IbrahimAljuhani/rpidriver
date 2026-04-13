@@ -121,8 +121,9 @@ neoleap_ip = 192.168.1.100
 # Printed on the terminal configuration receipt or provided by the bank.
 terminal_id = 12345678
 
-# WebSocket port used by the NeoLeap app (default: 7000 — do not change).
-port = 7000
+# WebSocket port used by the NeoLeap app.
+# N950 model uses 9998. Confirmed by nmap scan.
+port = 9998
 
 # Transaction timeout in seconds.
 # The terminal must complete the payment within this window or it is cancelled.

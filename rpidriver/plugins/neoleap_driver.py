@@ -31,7 +31,7 @@ Config keys (under [neoleap_driver] in config.ini):
   neoleap_ip  — IP address of the NeoLeap terminal  (required)
   terminal_id — Terminal ID: 8-digit bank TID (Al Rajhi, SNB …)
                 OR 16-digit device TID shown on the terminal screen  (required)
-  port        — WebSocket port (default: 7000)
+  port        — WebSocket port (default: 9998 for N950)
   timeout     — transaction timeout in seconds (default: 90)
 
 Registered in drivers{} as "neoleap_driver".
@@ -112,7 +112,7 @@ class NeoLeapDriver(PaymentTerminalDriver):
 
         self._neoleap_ip  = cfg.get("neoleap_ip",  "").strip()
         self._terminal_id = cfg.get("terminal_id", "").strip()
-        self._port        = int(cfg.get("port",    7000))
+        self._port        = int(cfg.get("port",    9998))
         self._timeout     = int(cfg.get("timeout", 90))
 
         # Seconds before an uncollected final state is auto-reset to "idle".
