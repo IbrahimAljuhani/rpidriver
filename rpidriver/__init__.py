@@ -89,6 +89,11 @@ def create_app(config_path=None):
 
     app.register_blueprint(views.bp)
 
+    # ── REST API blueprint (config, service control, logs) ───────────────────
+    from rpidriver import api  # noqa: E402
+
+    app.register_blueprint(api.bp)
+
     # ── Plugin loader ────────────────────────────────────────────────────────
     driver_list = []
     if config.has_option("rpidriver", "drivers"):

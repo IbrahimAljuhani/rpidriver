@@ -173,20 +173,35 @@ systemctl daemon-reload
 systemctl enable "$SERVICE_NAME"
 # Service is NOT started automatically — edit config.ini first
 
+# ── sudoers — allow rpidriver to restart its own service without a password ──
+SUDOERS_FILE="/etc/sudoers.d/rpidriver"
+info "Installing sudoers entry for passwordless service restart..."
+cat > "$SUDOERS_FILE" << 'SUDOERS_EOF'
+# Allow the rpidriver service user to restart itself via the dashboard
+rpidriver ALL=(ALL) NOPASSWD: /bin/systemctl restart rpidriver
+SUDOERS_EOF
+chmod 440 "$SUDOERS_FILE"
+# Validate the file — remove it if visudo finds a syntax error
+visudo -c -f "$SUDOERS_FILE" || { warning "sudoers syntax error — removing file."; rm -f "$SUDOERS_FILE"; }
+
 # ── Done ────────────────────────────────────────────────────────────────────
 info "Installation complete!"
 echo ""
 echo "  ┌─────────────────────────────────────────────────────────────────┐"
 echo "  │  NEXT STEPS                                                     │"
 echo "  │                                                                 │"
-echo "  │  1. Edit the config:                                            │"
-echo "  │     sudo nano $CONFIG_DIR/config.ini                            │"
-echo "  │                                                                 │"
-echo "  │  2. Start the service:                                          │"
+echo "  │  1. Start the service:                                          │"
 echo "  │     sudo systemctl start rpidriver                              │"
 echo "  │                                                                 │"
-echo "  │  3. Open the dashboard:                                         │"
-echo "  │     http://$(hostname -I | awk '{print $1}'):8069               │"
+echo "  │  2. Open the dashboard:                                         │"
+echo "  │     https://$(hostname -I | awk '{print $1}'):8069              │"
+echo "  │                                                                 │"
+echo "  │  3. Configure drivers in-browser:                               │"
+echo "  │     https://$(hostname -I | awk '{print $1}'):8069/config       │"
+echo "  │     (no more sudo nano — everything editable in the browser)    │"
+echo "  │                                                                 │"
+echo "  │  4. View live logs:                                             │"
+echo "  │     https://$(hostname -I | awk '{print $1}'):8069/logs         │"
 echo "  └─────────────────────────────────────────────────────────────────┘"
 echo ""
 echo "  Useful commands:"

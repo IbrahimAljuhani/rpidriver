@@ -1,0 +1,334 @@
+{% extends "layout.html" %}
+{% block title %}RPiDriver — {{ _('Configuration') }}{% endblock %}
+
+{% block content %}
+
+{# ── Restart banner (hidden by default) ── #}
+<div id="restart-banner" class="ssl-notice ssl-warn" style="display:none;margin-bottom:1rem;">
+  <strong>🔄 {{ _('Restart required.') }}</strong>
+  {{ _('Some changes need a service restart to take effect.') }}
+  <button class="btn btn-primary btn-sm" style="margin-inline-start:.75rem"
+          onclick="restartService()">
+    {{ _('Restart now') }}
+  </button>
+  <span id="restart-status" style="margin-inline-start:.5rem;font-size:.875rem;"></span>
+  <span style="float:inline-end;font-size:.8rem;color:var(--text-muted,#666)">
+    {{ _('or run:') }} <code>sudo systemctl restart rpidriver</code>
+  </span>
+</div>
+
+{# ── Save / status bar ── #}
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem;">
+  <h2 style="margin:0">{{ _('Configuration') }}</h2>
+  <div style="display:flex;align-items:center;gap:.75rem;">
+    <span id="save-status" style="font-size:.875rem;"></span>
+    <button class="btn btn-primary" onclick="saveConfig()">
+      💾 {{ _('Save') }}
+    </button>
+  </div>
+</div>
+
+{# ── Core section ── #}
+{% set core = schema['rpidriver'] %}
+<div class="card">
+  <h3>{{ core._icon }} {{ _(core._title) }}</h3>
+
+  {# Drivers checkboxes #}
+  <div class="field-group">
+    <label class="field-label">{{ _('Active Drivers') }}</label>
+    <div class="driver-grid" id="drivers-grid">
+      {% for drv_id in available_drivers %}
+      <label class="driver-chip {% if drv_id in active_drivers %}active{% endif %}"
+             data-driver="{{ drv_id }}">
+        <input type="checkbox"
+               name="drivers"
+               value="{{ drv_id }}"
+               {% if drv_id in active_drivers %}checked{% endif %}
+               onchange="onDriverToggle()">
+        <span>{{ driver_labels[drv_id] }}</span>
+      </label>
+      {% endfor %}
+    </div>
+    <span class="field-help">{{ _('Changes require restart.') }}</span>
+  </div>
+
+  {# Other core fields #}
+  {% for key, field in core.items() %}
+    {% if not key.startswith('_') and key != 'drivers' %}
+    <div class="field-group">
+      <label class="field-label" for="rpidriver__{{ key }}">
+        {{ _(field.label) }}
+        {% if field.get('restart') %}<span class="badge-restart">↺</span>{% endif %}
+      </label>
+
+      {% if field.type == 'boolean' %}
+        <label class="toggle">
+          <input type="checkbox" id="rpidriver__{{ key }}"
+                 data-section="rpidriver" data-key="{{ key }}"
+                 {% if current.get('rpidriver', {}).get(key, field.get('default', '')) in ('True','true','1','yes') %}checked{% endif %}>
+          <span class="toggle-slider"></span>
+        </label>
+      {% elif field.type == 'number' %}
+        <input type="number" class="field-input"
+               id="rpidriver__{{ key }}"
+               data-section="rpidriver" data-key="{{ key }}"
+               value="{{ current.get('rpidriver', {}).get(key, field.get('default', '')) }}"
+               {% if field.get('min') is not none %}min="{{ field.min }}"{% endif %}
+               {% if field.get('max') is not none %}max="{{ field.max }}"{% endif %}
+               {% if field.get('step') %}step="{{ field.step }}"{% endif %}>
+      {% else %}
+        <input type="text" class="field-input"
+               id="rpidriver__{{ key }}"
+               data-section="rpidriver" data-key="{{ key }}"
+               value="{{ current.get('rpidriver', {}).get(key, field.get('default', '')) }}"
+               {% if field.get('placeholder') %}placeholder="{{ field.placeholder }}"{% endif %}>
+      {% endif %}
+
+      {% if field.get('help') %}
+        <span class="field-help">{{ _(field.help) }}</span>
+      {% endif %}
+    </div>
+    {% endif %}
+  {% endfor %}
+</div>
+
+{# ── Driver sections ── #}
+{% for section_key, fields in schema.items() %}
+  {% if section_key != 'rpidriver' %}
+  {% set depends = fields.get('_depends') %}
+  <div class="card driver-section"
+       data-depends="{{ depends or '' }}"
+       id="section-{{ section_key }}"
+       {% if depends and depends not in active_drivers %}style="display:none"{% endif %}>
+
+    <h3>{{ fields._icon }} {{ _(fields._title) }}</h3>
+
+    {% for key, field in fields.items() %}
+      {% if not key.startswith('_') %}
+      <div class="field-group">
+        <label class="field-label" for="{{ section_key }}__{{ key }}">
+          {{ _(field.label) }}
+          {% if field.get('restart') %}<span class="badge-restart">↺</span>{% endif %}
+        </label>
+
+        {% set cur_val = current.get(section_key, {}).get(key, field.get('default', '')) %}
+
+        {% if field.type == 'boolean' %}
+          <label class="toggle">
+            <input type="checkbox"
+                   id="{{ section_key }}__{{ key }}"
+                   data-section="{{ section_key }}" data-key="{{ key }}"
+                   {% if cur_val in ('True','true','1','yes') %}checked{% endif %}>
+            <span class="toggle-slider"></span>
+          </label>
+
+        {% elif field.type == 'select' %}
+          <select class="field-input"
+                  id="{{ section_key }}__{{ key }}"
+                  data-section="{{ section_key }}" data-key="{{ key }}">
+            {% for opt_val, opt_label in field.options %}
+              <option value="{{ opt_val }}" {% if cur_val == opt_val %}selected{% endif %}>
+                {{ opt_label }}
+              </option>
+            {% endfor %}
+          </select>
+
+        {% elif field.type == 'number' %}
+          <input type="number" class="field-input"
+                 id="{{ section_key }}__{{ key }}"
+                 data-section="{{ section_key }}" data-key="{{ key }}"
+                 value="{{ cur_val }}"
+                 {% if field.get('min') is not none %}min="{{ field.min }}"{% endif %}
+                 {% if field.get('max') is not none %}max="{{ field.max }}"{% endif %}
+                 {% if field.get('step') %}step="{{ field.step }}"{% endif %}>
+
+        {% else %}
+          <input type="text" class="field-input"
+                 id="{{ section_key }}__{{ key }}"
+                 data-section="{{ section_key }}" data-key="{{ key }}"
+                 value="{{ cur_val }}"
+                 {% if field.get('placeholder') %}placeholder="{{ field.placeholder }}"{% endif %}
+                 {% if field.get('pattern') %}pattern="{{ field.pattern }}"{% endif %}
+                 {% if field.get('maxlength') %}maxlength="{{ field.maxlength }}"{% endif %}>
+        {% endif %}
+
+        {% if field.get('help') %}
+          <span class="field-help">{{ _(field.help) }}</span>
+        {% endif %}
+      </div>
+      {% endif %}
+    {% endfor %}
+
+  </div>
+  {% endif %}
+{% endfor %}
+
+<style>
+/* ── Config-specific styles ── */
+.driver-grid {
+  display: flex; flex-wrap: wrap; gap: .5rem; margin: .35rem 0 .5rem;
+}
+.driver-chip {
+  display: inline-flex; align-items: center; gap: .4rem;
+  padding: .35rem .8rem;
+  border: 1.5px solid var(--border, #e5e7eb);
+  border-radius: 999px;
+  font-size: .82rem; font-weight: 600;
+  cursor: pointer; user-select: none;
+  transition: border-color .15s, background .15s;
+}
+.driver-chip input { display: none; }
+.driver-chip.active {
+  border-color: var(--primary, #1a7f64);
+  background: color-mix(in srgb, var(--primary, #1a7f64) 10%, transparent);
+  color: var(--primary, #1a7f64);
+}
+.driver-chip:hover { border-color: var(--primary, #1a7f64); }
+
+.field-group {
+  margin-bottom: 1.1rem;
+}
+.field-label {
+  display: block; font-size: .82rem; font-weight: 600;
+  margin-bottom: .35rem; color: var(--text, #1c1c1e);
+}
+.field-input {
+  width: 100%; max-width: 420px;
+  padding: .45rem .7rem;
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 6px; font-size: .88rem;
+  background: #fff; color: var(--text, #1c1c1e);
+  transition: border-color .15s;
+}
+.field-input:focus {
+  outline: none;
+  border-color: var(--primary, #1a7f64);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary, #1a7f64) 15%, transparent);
+}
+.field-help {
+  display: block; font-size: .78rem;
+  color: var(--text-muted, #6b7280); margin-top: .3rem;
+}
+.badge-restart {
+  display: inline-block; font-size: .65rem; font-weight: 700;
+  padding: .1rem .35rem; border-radius: 3px;
+  background: #fef9c3; color: #854d0e;
+  margin-inline-start: .35rem; vertical-align: middle;
+}
+
+/* Toggle switch */
+.toggle { display: inline-flex; align-items: center; cursor: pointer; }
+.toggle input { display: none; }
+.toggle-slider {
+  width: 42px; height: 24px; border-radius: 12px;
+  background: #d1d5db; position: relative; transition: background .2s;
+}
+.toggle-slider::after {
+  content: ''; position: absolute;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: #fff; top: 3px; left: 3px;
+  transition: transform .2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+.toggle input:checked + .toggle-slider { background: var(--primary, #1a7f64); }
+.toggle input:checked + .toggle-slider::after { transform: translateX(18px); }
+
+.btn-sm { padding: .3rem .75rem; font-size: .82rem; }
+</style>
+
+<script>
+// ── Driver toggle: show/hide sections ────────────────────────────────────────
+function onDriverToggle() {
+  const checked = new Set(
+    [...document.querySelectorAll('input[name="drivers"]:checked')].map(el => el.value)
+  );
+  // Sync chip styling
+  document.querySelectorAll('.driver-chip').forEach(chip => {
+    const active = checked.has(chip.dataset.driver);
+    chip.classList.toggle('active', active);
+  });
+  // Show/hide driver sections
+  document.querySelectorAll('.driver-section[data-depends]').forEach(sec => {
+    const dep = sec.dataset.depends;
+    sec.style.display = (!dep || checked.has(dep)) ? '' : 'none';
+  });
+}
+
+// ── Collect current form values into { section: { key: val } } ──────────────
+function collectValues() {
+  const out = {};
+
+  // Drivers list (core)
+  const drivers = [...document.querySelectorAll('input[name="drivers"]:checked')]
+    .map(el => el.value).join(', ');
+  out['rpidriver'] = { drivers };
+
+  // All other inputs
+  document.querySelectorAll('[data-section][data-key]').forEach(el => {
+    const sec = el.dataset.section;
+    const key = el.dataset.key;
+    if (!out[sec]) out[sec] = {};
+    out[sec][key] = (el.type === 'checkbox') ? (el.checked ? 'True' : 'False') : el.value;
+  });
+
+  return out;
+}
+
+// ── Save ─────────────────────────────────────────────────────────────────────
+async function saveConfig() {
+  const statusEl = document.getElementById('save-status');
+  statusEl.style.color = '';
+  statusEl.textContent = '{{ _("Saving…") }}';
+
+  try {
+    const resp = await fetch('/api/config', {
+      method : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body   : JSON.stringify(collectValues()),
+    });
+    const data = await resp.json();
+
+    if (data.success) {
+      statusEl.style.color = '#16a34a';
+      statusEl.textContent = '✅ {{ _("Saved") }}';
+      setTimeout(() => { statusEl.textContent = ''; }, 3000);
+
+      if (data.restart_required) {
+        document.getElementById('restart-banner').style.display = '';
+      }
+    } else {
+      statusEl.style.color = '#dc2626';
+      statusEl.textContent = '❌ ' + (data.error || '{{ _("Save failed") }}');
+    }
+  } catch (err) {
+    statusEl.style.color = '#dc2626';
+    statusEl.textContent = '❌ ' + err.message;
+  }
+}
+
+// ── Restart service ───────────────────────────────────────────────────────────
+async function restartService() {
+  const el = document.getElementById('restart-status');
+  el.textContent = '{{ _("Restarting…") }}';
+
+  try {
+    const resp = await fetch('/api/service/restart', { method: 'POST' });
+    const data = await resp.json();
+
+    if (data.success) {
+      el.style.color = '#16a34a';
+      el.textContent = '✅ {{ _("Restarted.  Reconnecting…") }}';
+      // Reload page after 4s to pick up new settings
+      setTimeout(() => location.reload(), 4000);
+    } else {
+      el.style.color = '#dc2626';
+      el.textContent = '❌ ' + (data.error || '{{ _("Failed") }}');
+    }
+  } catch (err) {
+    el.style.color = '#dc2626';
+    el.textContent = '❌ ' + err.message;
+  }
+}
+</script>
+
+{% endblock %}

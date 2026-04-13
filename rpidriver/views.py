@@ -5,9 +5,11 @@ Web interface views for RPiDriver dashboard.
 import logging
 import os
 import platform
+import socket
 import subprocess
 
-from flask import Blueprint, render_template, redirect, session, url_for
+from flask import Blueprint, jsonify, render_template, redirect, \
+    session, url_for, Response
 from flask_babel import gettext as _
 
 bp = Blueprint("views", __name__)
@@ -95,6 +97,134 @@ def _get_ssl_info() -> dict:
         pass  # openssl not available (Windows dev env)
 
     return {"enabled": True, "cert_path": cert_path, "expires": expires}
+
+
+@bp.route("/ssl/generate", methods=["POST"])
+def ssl_generate():
+    """
+    POST /ssl/generate
+    Generate a self-signed SSL certificate for HTTPS.
+
+    Writes cert.pem + key.pem to /etc/rpidriver/ssl/ (the directory must be
+    writable by the rpidriver service user — handled by install_pi.sh).
+    Returns JSON so the UI can show progress without a full page reload.
+    After success the user must restart the service to switch to HTTPS.
+    """
+    from rpidriver import get_config
+    config  = get_config()
+    ssl_dir = os.path.dirname(
+        config.get("rpidriver", "ssl_cert", fallback="").strip()
+        or "/etc/rpidriver/ssl/cert.pem"
+    )
+    cert_path = os.path.join(ssl_dir, "cert.pem")
+    key_path  = os.path.join(ssl_dir, "key.pem")
+
+    # Detect the Pi's outbound IP (more reliable than gethostbyname)
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        pi_ip = s.getsockname()[0]
+        s.close()
+    except Exception:
+        pi_ip = "127.0.0.1"
+
+    try:
+        os.makedirs(ssl_dir, mode=0o755, exist_ok=True)
+    except OSError as exc:
+        return jsonify({"success": False, "error": f"Cannot create SSL dir: {exc}"}), 500
+
+    san = f"subjectAltName=IP:{pi_ip},IP:127.0.0.1,DNS:rpidriver.local"
+
+    try:
+        result = subprocess.run(
+            [
+                "openssl", "req", "-x509",
+                "-newkey", "rsa:2048",
+                "-keyout", key_path,
+                "-out",    cert_path,
+                "-days",   "3650",
+                "-nodes",
+                "-subj",   "/C=SA/O=RPiDriver/CN=rpidriver",
+                "-addext", san,
+            ],
+            capture_output=True, timeout=15,
+        )
+        if result.returncode != 0:
+            err = result.stderr.decode(errors="replace")
+            logger.error("ssl_generate openssl error: %s", err)
+            return jsonify({"success": False, "error": err}), 500
+    except FileNotFoundError:
+        return jsonify({"success": False, "error": "openssl not found — install it first."}), 500
+    except subprocess.TimeoutExpired:
+        return jsonify({"success": False, "error": "openssl timed out."}), 500
+    except Exception as exc:
+        return jsonify({"success": False, "error": str(exc)}), 500
+
+    try:
+        os.chmod(key_path,  0o600)
+        os.chmod(cert_path, 0o644)
+    except OSError as exc:
+        logger.warning("ssl_generate: chmod failed: %s", exc)
+
+    logger.info("ssl_generate: certificate generated at %s (IP: %s)", cert_path, pi_ip)
+    return jsonify({
+        "success": True,
+        "ip":      pi_ip,
+        "cert":    cert_path,
+        "message": "Certificate generated — restart RPiDriver to enable HTTPS.",
+    })
+
+
+@bp.route("/ssl/cert.pem")
+def ssl_download_cert():
+    """
+    GET /ssl/cert.pem
+    Download the SSL certificate so the user can import it into:
+      - The browser (to trust RPiDriver's HTTPS)
+      - Odoo → Settings → Technical → IoT → trusted certificates
+    """
+    from rpidriver import get_config
+    config    = get_config()
+    cert_path = config.get("rpidriver", "ssl_cert", fallback="").strip() \
+                or "/etc/rpidriver/ssl/cert.pem"
+
+    if not os.path.exists(cert_path):
+        return _("Certificate not found. Generate one first from the System page."), 404
+
+    try:
+        with open(cert_path, "r") as fh:
+            cert_pem = fh.read()
+    except OSError as exc:
+        return str(exc), 500
+
+    return Response(
+        cert_pem,
+        mimetype="application/x-pem-file",
+        headers={"Content-Disposition": 'attachment; filename="rpidriver-cert.pem"'},
+    )
+
+
+@bp.route("/config")
+def config():
+    from rpidriver.config_schema import AVAILABLE_DRIVERS, DRIVER_LABELS, CONFIG_SCHEMA
+    from rpidriver.api import _read_cfg, _cfg_to_dict, _merge_defaults
+    cfg  = _read_cfg()
+    raw  = _cfg_to_dict(cfg)
+    active_raw = raw.get("rpidriver", {}).get("drivers", "")
+    active_drivers = [d.strip() for d in active_raw.split(",") if d.strip()]
+    return render_template(
+        "config.html",
+        schema          = CONFIG_SCHEMA,
+        current         = _merge_defaults(raw),
+        available_drivers = AVAILABLE_DRIVERS,
+        active_drivers  = active_drivers,
+        driver_labels   = DRIVER_LABELS,
+    )
+
+
+@bp.route("/logs")
+def logs():
+    return render_template("logs.html")
 
 
 @bp.route("/usb_devices")
