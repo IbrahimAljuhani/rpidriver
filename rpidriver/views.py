@@ -272,19 +272,21 @@ def ssl_download_cert():
 @bp.route("/config")
 @require_auth
 def config():
-    from rpidriver.config_schema import AVAILABLE_DRIVERS, DRIVER_LABELS, CONFIG_SCHEMA
+    from rpidriver.config_schema import AVAILABLE_DRIVERS, DRIVER_LABELS, DRIVER_LABELS_AR, CONFIG_SCHEMA
     from rpidriver.api import _read_cfg, _cfg_to_dict, _merge_defaults
+    from rpidriver import get_locale
     cfg  = _read_cfg()
     raw  = _cfg_to_dict(cfg)
     active_raw = raw.get("rpidriver", {}).get("drivers", "")
     active_drivers = [d.strip() for d in active_raw.split(",") if d.strip()]
+    labels = DRIVER_LABELS_AR if get_locale() == "ar" else DRIVER_LABELS
     return render_template(
         "config.html",
-        schema          = CONFIG_SCHEMA,
-        current         = _merge_defaults(raw),
+        schema            = CONFIG_SCHEMA,
+        current           = _merge_defaults(raw),
         available_drivers = AVAILABLE_DRIVERS,
-        active_drivers  = active_drivers,
-        driver_labels   = DRIVER_LABELS,
+        active_drivers    = active_drivers,
+        driver_labels     = labels,
     )
 
 

@@ -34,6 +34,14 @@ DRIVER_LABELS = {
     "neoleap_driver" : "Mada Terminal (NeoLeap)",
 }
 
+DRIVER_LABELS_AR = {
+    "escpos_driver"  : "طابعة ESC/POS",
+    "scale_driver"   : "الميزان",
+    "display_driver" : "شاشة العميل",
+    "cups_driver"    : "طابعة شبكة CUPS",
+    "neoleap_driver" : "طرفية مدى (NeoLeap)",
+}
+
 CONFIG_SCHEMA = {
     "rpidriver": {
         "_title"  : "Core",
@@ -46,11 +54,13 @@ CONFIG_SCHEMA = {
             "restart": True,
         },
         "host": {
-            "type"   : "text",
-            "label"  : "Listen Address",
-            "default": "0.0.0.0",
-            "help"   : "IP to bind to.  Use 0.0.0.0 for all interfaces.",
-            "restart": True,
+            "type"       : "text",
+            "label"      : "Listen Address",
+            "default"    : "0.0.0.0",
+            "placeholder": "0.0.0.0",
+            "pattern"    : r"^(\d{1,3}\.){3}\d{1,3}$|^[a-zA-Z0-9]([a-zA-Z0-9\-\.]*[a-zA-Z0-9])?$",
+            "help"       : "IP to bind to.  Use 0.0.0.0 for all interfaces.",
+            "restart"    : True,
         },
         "port": {
             "type"   : "number",
@@ -69,11 +79,12 @@ CONFIG_SCHEMA = {
             "restart": True,
         },
         "dashboard_password": {
-            "type"      : "text",
-            "label"     : "Dashboard Password",
-            "default"   : "",
-            "help"      : "Password to access the web dashboard.  Leave empty to disable authentication (LAN-only setups).",
-            "maxlength" : 128,
+            "type"        : "password",
+            "label"       : "Dashboard Password",
+            "default"     : "",
+            "help"        : "Password to access the web dashboard.  Leave empty to disable authentication (LAN-only setups).",
+            "maxlength"   : 128,
+            "autocomplete": "new-password",
         },
         "cors_origins": {
             "type"       : "text",

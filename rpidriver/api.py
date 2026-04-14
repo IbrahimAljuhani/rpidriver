@@ -14,6 +14,7 @@ import functools
 import logging
 import os
 import subprocess
+import tempfile
 from configparser import ConfigParser
 
 from flask import Blueprint, Response, jsonify, request, session, stream_with_context
@@ -120,19 +121,64 @@ def config_save():
                 continue
 
             str_val = str(value).strip()
-
-            # Detect restart-required changes
             schema_field = schema_section.get(key, {})
+            field_type   = schema_field.get("type", "text")
+
+            # ── Server-side type / range validation ──────────────────────────
+            if field_type == "number":
+                if str_val == "":
+                    str_val = str(schema_field.get("default", ""))
+                try:
+                    num = float(str_val)
+                except (ValueError, TypeError):
+                    return jsonify({"success": False,
+                                    "error": f"[{section}] {key}: must be a number"}), 400
+                min_val = schema_field.get("min")
+                max_val = schema_field.get("max")
+                if min_val is not None and num < min_val:
+                    return jsonify({"success": False,
+                                    "error": f"[{section}] {key}: minimum value is {min_val}"}), 400
+                if max_val is not None and num > max_val:
+                    return jsonify({"success": False,
+                                    "error": f"[{section}] {key}: maximum value is {max_val}"}), 400
+            elif field_type == "select":
+                valid = {v for v, _ in schema_field.get("options", [])}
+                if str_val and str_val not in valid:
+                    return jsonify({"success": False,
+                                    "error": f"[{section}] {key}: invalid option '{str_val}'"}), 400
+            elif field_type in ("text", "password"):
+                maxlen = schema_field.get("maxlength")
+                if maxlen and len(str_val) > int(maxlen):
+                    return jsonify({"success": False,
+                                    "error": f"[{section}] {key}: exceeds max length of {maxlen}"}), 400
+
+            # ── Detect restart-required changes ───────────────────────────────
+            # Compare against the effective current value (schema default when
+            # the key is absent) to avoid false positives on the first save.
             if schema_field.get("restart"):
-                current = cfg.get(section, key, fallback=None)
-                if current != str_val:
+                default_str = str(schema_field.get("default", ""))
+                effective   = cfg.get(section, key, fallback=default_str).strip()
+                if effective != str_val:
                     restart_required = True
 
             cfg.set(section, key, str_val)
 
+    # ── Atomic write: temp file → os.replace() ───────────────────────────────
+    # Prevents a corrupt config.ini if the process dies mid-write.
+    config_path = _config_path()
+    config_dir  = os.path.dirname(config_path) or "."
     try:
-        with open(_config_path(), "w") as fh:
-            cfg.write(fh)
+        fd, tmp_path = tempfile.mkstemp(dir=config_dir, suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w") as fh:
+                cfg.write(fh)
+            os.replace(tmp_path, config_path)
+        except Exception:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+            raise
         logger.info("api.config_save: config.ini written (restart_required=%s)", restart_required)
     except OSError as exc:
         logger.error("api.config_save: write failed: %s", exc)

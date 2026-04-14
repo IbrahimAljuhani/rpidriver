@@ -76,12 +76,20 @@
                {% if field.get('min') is not none %}min="{{ field.min }}"{% endif %}
                {% if field.get('max') is not none %}max="{{ field.max }}"{% endif %}
                {% if field.get('step') %}step="{{ field.step }}"{% endif %}>
+      {% elif field.type == 'password' %}
+        <input type="password" class="field-input"
+               id="rpidriver__{{ key }}"
+               data-section="rpidriver" data-key="{{ key }}"
+               value="{{ current.get('rpidriver', {}).get(key, field.get('default', '')) }}"
+               autocomplete="{{ field.get('autocomplete', 'off') }}"
+               {% if field.get('maxlength') %}maxlength="{{ field.maxlength }}"{% endif %}>
       {% else %}
         <input type="text" class="field-input"
                id="rpidriver__{{ key }}"
                data-section="rpidriver" data-key="{{ key }}"
                value="{{ current.get('rpidriver', {}).get(key, field.get('default', '')) }}"
-               {% if field.get('placeholder') %}placeholder="{{ field.placeholder }}"{% endif %}>
+               {% if field.get('placeholder') %}placeholder="{{ field.placeholder }}"{% endif %}
+               {% if field.get('pattern') %}pattern="{{ field.pattern }}"{% endif %}>
       {% endif %}
 
       {% if field.get('help') %}
@@ -142,6 +150,14 @@
                  {% if field.get('max') is not none %}max="{{ field.max }}"{% endif %}
                  {% if field.get('step') %}step="{{ field.step }}"{% endif %}>
 
+        {% elif field.type == 'password' %}
+          <input type="password" class="field-input"
+                 id="{{ section_key }}__{{ key }}"
+                 data-section="{{ section_key }}" data-key="{{ key }}"
+                 value="{{ cur_val }}"
+                 autocomplete="{{ field.get('autocomplete', 'off') }}"
+                 {% if field.get('maxlength') %}maxlength="{{ field.maxlength }}"{% endif %}>
+
         {% else %}
           <input type="text" class="field-input"
                  id="{{ section_key }}__{{ key }}"
@@ -164,6 +180,29 @@
 {% endfor %}
 
 <script>
+// ── Unsaved-changes tracking ──────────────────────────────────────────────────
+let _isDirty = false;
+
+function _markDirty() { _isDirty = true; }
+function _markClean() { _isDirty = false; }
+
+window.addEventListener('beforeunload', e => {
+  if (_isDirty) {
+    e.preventDefault();
+    e.returnValue = '';  // required for Chrome
+  }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Listen for any change on inputs, selects, textareas inside the page
+  document.querySelectorAll('input, select, textarea').forEach(el => {
+    el.addEventListener('change', _markDirty);
+    if (el.type !== 'checkbox' && el.tagName !== 'SELECT') {
+      el.addEventListener('input', _markDirty);
+    }
+  });
+});
+
 // ── Driver toggle: show/hide sections ────────────────────────────────────────
 function onDriverToggle() {
   const checked = new Set(
@@ -208,6 +247,7 @@ async function saveConfig() {
     const data = await resp.json();
 
     if (data.success) {
+      _markClean();
       statusEl.className = 'config-save-status action-success';
       statusEl.textContent = '✅ {{ _("Saved") }}';
       setTimeout(() => { statusEl.textContent = ''; statusEl.className = 'config-save-status'; }, 3000);
