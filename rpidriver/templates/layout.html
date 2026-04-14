@@ -27,6 +27,7 @@
     <li><a href="{{ url_for('views.usb_devices') }}" {% if ep == 'views.usb_devices' %}class="active" aria-current="page"{% endif %}>{{ _('USB') }}</a></li>
   </ul>
   <div class="nav-actions">
+    <button class="theme-btn" id="theme-btn" onclick="toggleDashboardTheme()" aria-label="{{ _('Toggle theme') }}">☀</button>
     {% if locale == 'ar' %}
       <a class="lang-toggle" href="{{ url_for('views.set_language', locale='en') }}">English</a>
     {% else %}
@@ -48,6 +49,26 @@
   RPiDriver &mdash; <a href="https://ia.sa/rpidriver" target="_blank" rel="noopener">ia.sa/rpidriver</a>
   &nbsp;&bull;&nbsp; AGPL-3.0
 </footer>
+
+<script>
+(function initDashboardTheme() {
+  const saved = localStorage.getItem('rpidriver-dash-theme');
+  const sys   = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  const theme = saved || sys;
+  if (theme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+  const btn = document.getElementById('theme-btn');
+  if (btn) btn.textContent = theme === 'dark' ? '☽' : '☀';
+})();
+
+function toggleDashboardTheme() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const next   = isDark ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next === 'dark' ? 'dark' : '');
+  localStorage.setItem('rpidriver-dash-theme', next);
+  const btn = document.getElementById('theme-btn');
+  if (btn) btn.textContent = next === 'dark' ? '☽' : '☀';
+}
+</script>
 
 </body>
 </html>

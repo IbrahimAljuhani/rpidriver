@@ -14,6 +14,35 @@
   --text-muted: #6b7280;  /* alias for --muted */
 }
 
+/* ── Dark mode ── */
+[data-theme="dark"] {
+  --primary: #34d399;
+  --bg: #0f172a;
+  --surface: #1e293b;
+  --text: #f1f5f9;
+  --muted: #94a3b8;
+  --border: #334155;
+  --danger: #f87171;
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --text-muted: #94a3b8;
+}
+[data-theme="dark"] .card {
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+[data-theme="dark"] .notice-warn   { background: rgba(251,191,36,0.1);  color: #fde68a; }
+[data-theme="dark"] .notice-info   { background: rgba(59,130,246,0.1);  color: #93c5fd; }
+[data-theme="dark"] .notice-danger { background: rgba(248,113,113,0.1); color: #fca5a5; }
+[data-theme="dark"] .badge-connected    { background: rgba(74,222,128,0.12); color: var(--success); }
+[data-theme="dark"] .badge-error        { background: rgba(248,113,113,0.12); color: var(--danger); }
+[data-theme="dark"] .badge-disconnected { background: rgba(148,163,184,0.12); color: var(--muted); }
+[data-theme="dark"] .badge-warning      { background: rgba(251,191,36,0.12);  color: var(--warning); }
+[data-theme="dark"] .login-error  { background: rgba(248,113,113,0.1); color: #fca5a5; }
+[data-theme="dark"] .login-input  { background: var(--surface); border-color: var(--border); color: var(--text); }
+[data-theme="dark"] .btn-secondary { background: #334155; color: var(--text); }
+[data-theme="dark"] .btn-secondary:hover:not(:disabled) { background: #475569; }
+[data-theme="dark"] .badge-restart { background: rgba(251,191,36,0.15); color: #fde68a; }
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
@@ -110,7 +139,7 @@ main {
   display: inline-block;
   padding: 0.2rem 0.6rem;
   border-radius: 999px;
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   font-weight: 600;
 }
 .badge-connected    { background: #dcfce7; color: var(--success); }
@@ -189,7 +218,7 @@ footer a { color: var(--primary); text-decoration: none; }
 /* ── Hint / muted text ── */
 .hint {
   display: block;
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   color: var(--muted);
   margin-top: 0.3rem;
 }
@@ -298,13 +327,13 @@ footer a { color: var(--primary); text-decoration: none; }
 }
 .field-help {
   display: block;
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   color: var(--muted);
   margin-top: 0.3rem;
 }
 .badge-restart {
   display: inline-block;
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   font-weight: 700;
   padding: 0.1rem 0.35rem;
   border-radius: 3px;
@@ -439,10 +468,34 @@ footer a { color: var(--primary); text-decoration: none; }
 .login-input:focus { outline: 2px solid var(--primary); outline-offset: 1px; border-color: var(--primary); }
 .login-submit { width: 100%; justify-content: center; }
 
+/* ── Dark mode toggle button in nav ── */
+.theme-btn {
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.3);
+  color: #fff;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius);
+  font-size: 1rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: background 0.15s;
+}
+.theme-btn:hover         { background: rgba(255,255,255,0.25); }
+.theme-btn:focus-visible { outline: 2px solid rgba(255,255,255,0.8); outline-offset: 2px; }
+
 /* ── Responsive nav ── */
 @media (max-width: 640px) {
   nav { flex-wrap: wrap; gap: 0.5rem; padding: 0.75rem 1rem; }
   nav ul { flex-wrap: wrap; gap: 0.5rem 1rem; width: 100%; }
   .nav-actions { margin-top: 0.25rem; }
   .log-search-input { width: 100px; }
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }
