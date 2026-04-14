@@ -4,24 +4,24 @@
 {% block content %}
 
 {# ── Restart banner (hidden by default) ── #}
-<div id="restart-banner" class="ssl-notice ssl-warn" style="display:none;margin-bottom:1rem;">
+<div id="restart-banner" class="notice notice-warn" style="display:none;margin-bottom:1rem;">
   <strong>🔄 {{ _('Restart required.') }}</strong>
   {{ _('Some changes need a service restart to take effect.') }}
   <button class="btn btn-primary btn-sm" style="margin-inline-start:.75rem"
           onclick="restartService()">
     {{ _('Restart now') }}
   </button>
-  <span id="restart-status" style="margin-inline-start:.5rem;font-size:.875rem;"></span>
-  <span style="float:inline-end;font-size:.8rem;color:var(--text-muted,#666)">
+  <span id="restart-status" class="config-restart-status"></span>
+  <span class="config-restart-hint">
     {{ _('or run:') }} <code>sudo systemctl restart rpidriver</code>
   </span>
 </div>
 
 {# ── Save / status bar ── #}
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem;">
+<div class="config-toolbar">
   <h2 style="margin:0">{{ _('Configuration') }}</h2>
-  <div style="display:flex;align-items:center;gap:.75rem;">
-    <span id="save-status" style="font-size:.875rem;"></span>
+  <div class="config-toolbar-actions">
+    <span id="save-status" class="config-save-status"></span>
     <button class="btn btn-primary" onclick="saveConfig()">
       💾 {{ _('Save') }}
     </button>
@@ -163,91 +163,15 @@
   {% endif %}
 {% endfor %}
 
-<style>
-/* ── Config-specific styles ── */
-.driver-grid {
-  display: flex; flex-wrap: wrap; gap: .5rem; margin: .35rem 0 .5rem;
-}
-.driver-chip {
-  display: inline-flex; align-items: center; gap: .4rem;
-  padding: .35rem .8rem;
-  border: 1.5px solid var(--border, #e5e7eb);
-  border-radius: 999px;
-  font-size: .82rem; font-weight: 600;
-  cursor: pointer; user-select: none;
-  transition: border-color .15s, background .15s;
-}
-.driver-chip input { display: none; }
-.driver-chip.active {
-  border-color: var(--primary, #1a7f64);
-  background: color-mix(in srgb, var(--primary, #1a7f64) 10%, transparent);
-  color: var(--primary, #1a7f64);
-}
-.driver-chip:hover { border-color: var(--primary, #1a7f64); }
-
-.field-group {
-  margin-bottom: 1.1rem;
-}
-.field-label {
-  display: block; font-size: .82rem; font-weight: 600;
-  margin-bottom: .35rem; color: var(--text, #1c1c1e);
-}
-.field-input {
-  width: 100%; max-width: 420px;
-  padding: .45rem .7rem;
-  border: 1px solid var(--border, #e5e7eb);
-  border-radius: 6px; font-size: .88rem;
-  background: #fff; color: var(--text, #1c1c1e);
-  transition: border-color .15s;
-}
-.field-input:focus {
-  outline: none;
-  border-color: var(--primary, #1a7f64);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary, #1a7f64) 15%, transparent);
-}
-.field-help {
-  display: block; font-size: .78rem;
-  color: var(--text-muted, #6b7280); margin-top: .3rem;
-}
-.badge-restart {
-  display: inline-block; font-size: .65rem; font-weight: 700;
-  padding: .1rem .35rem; border-radius: 3px;
-  background: #fef9c3; color: #854d0e;
-  margin-inline-start: .35rem; vertical-align: middle;
-}
-
-/* Toggle switch */
-.toggle { display: inline-flex; align-items: center; cursor: pointer; }
-.toggle input { display: none; }
-.toggle-slider {
-  width: 42px; height: 24px; border-radius: 12px;
-  background: #d1d5db; position: relative; transition: background .2s;
-}
-.toggle-slider::after {
-  content: ''; position: absolute;
-  width: 18px; height: 18px; border-radius: 50%;
-  background: #fff; top: 3px; left: 3px;
-  transition: transform .2s;
-  box-shadow: 0 1px 3px rgba(0,0,0,.2);
-}
-.toggle input:checked + .toggle-slider { background: var(--primary, #1a7f64); }
-.toggle input:checked + .toggle-slider::after { transform: translateX(18px); }
-
-.btn-sm { padding: .3rem .75rem; font-size: .82rem; }
-</style>
-
 <script>
 // ── Driver toggle: show/hide sections ────────────────────────────────────────
 function onDriverToggle() {
   const checked = new Set(
     [...document.querySelectorAll('input[name="drivers"]:checked')].map(el => el.value)
   );
-  // Sync chip styling
   document.querySelectorAll('.driver-chip').forEach(chip => {
-    const active = checked.has(chip.dataset.driver);
-    chip.classList.toggle('active', active);
+    chip.classList.toggle('active', checked.has(chip.dataset.driver));
   });
-  // Show/hide driver sections
   document.querySelectorAll('.driver-section[data-depends]').forEach(sec => {
     const dep = sec.dataset.depends;
     sec.style.display = (!dep || checked.has(dep)) ? '' : 'none';
@@ -257,27 +181,22 @@ function onDriverToggle() {
 // ── Collect current form values into { section: { key: val } } ──────────────
 function collectValues() {
   const out = {};
-
-  // Drivers list (core)
   const drivers = [...document.querySelectorAll('input[name="drivers"]:checked')]
     .map(el => el.value).join(', ');
   out['rpidriver'] = { drivers };
-
-  // All other inputs
   document.querySelectorAll('[data-section][data-key]').forEach(el => {
     const sec = el.dataset.section;
     const key = el.dataset.key;
     if (!out[sec]) out[sec] = {};
     out[sec][key] = (el.type === 'checkbox') ? (el.checked ? 'True' : 'False') : el.value;
   });
-
   return out;
 }
 
 // ── Save ─────────────────────────────────────────────────────────────────────
 async function saveConfig() {
   const statusEl = document.getElementById('save-status');
-  statusEl.style.color = '';
+  statusEl.className = 'config-save-status';
   statusEl.textContent = '{{ _("Saving…") }}';
 
   try {
@@ -289,19 +208,18 @@ async function saveConfig() {
     const data = await resp.json();
 
     if (data.success) {
-      statusEl.style.color = '#16a34a';
+      statusEl.className = 'config-save-status action-success';
       statusEl.textContent = '✅ {{ _("Saved") }}';
-      setTimeout(() => { statusEl.textContent = ''; }, 3000);
-
+      setTimeout(() => { statusEl.textContent = ''; statusEl.className = 'config-save-status'; }, 3000);
       if (data.restart_required) {
         document.getElementById('restart-banner').style.display = '';
       }
     } else {
-      statusEl.style.color = '#dc2626';
+      statusEl.className = 'config-save-status action-error';
       statusEl.textContent = '❌ ' + (data.error || '{{ _("Save failed") }}');
     }
   } catch (err) {
-    statusEl.style.color = '#dc2626';
+    statusEl.className = 'config-save-status action-error';
     statusEl.textContent = '❌ ' + err.message;
   }
 }
@@ -309,23 +227,22 @@ async function saveConfig() {
 // ── Restart service ───────────────────────────────────────────────────────────
 async function restartService() {
   const el = document.getElementById('restart-status');
+  el.className = 'config-restart-status';
   el.textContent = '{{ _("Restarting…") }}';
 
   try {
     const resp = await fetch('/api/service/restart', { method: 'POST' });
     const data = await resp.json();
-
     if (data.success) {
-      el.style.color = '#16a34a';
+      el.className = 'config-restart-status action-success';
       el.textContent = '✅ {{ _("Restarted.  Reconnecting…") }}';
-      // Reload page after 4s to pick up new settings
       setTimeout(() => location.reload(), 4000);
     } else {
-      el.style.color = '#dc2626';
+      el.className = 'config-restart-status action-error';
       el.textContent = '❌ ' + (data.error || '{{ _("Failed") }}');
     }
   } catch (err) {
-    el.style.color = '#dc2626';
+    el.className = 'config-restart-status action-error';
     el.textContent = '❌ ' + err.message;
   }
 }

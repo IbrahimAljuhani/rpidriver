@@ -1,0 +1,24 @@
+{% extends "layout.html" %}
+{% block title %}RPiDriver — {{ _('Login') }}{% endblock %}
+
+{% block content %}
+<div class="card login-card">
+  <h2 style="margin-bottom:1.25rem;">🔒 {{ _('Dashboard Login') }}</h2>
+
+  {% if error %}
+  <div class="login-error" role="alert" aria-live="assertive">
+    {{ error }}
+  </div>
+  {% endif %}
+
+  <form method="post">
+    <label class="login-label" for="password">{{ _('Password') }}</label>
+    <input id="password" name="password" type="password"
+           class="login-input"
+           autofocus autocomplete="current-password" />
+    <button type="submit" class="btn btn-primary login-submit">
+      {{ _('Sign in') }}
+    </button>
+  </form>
+</div>
+{% endblock %}

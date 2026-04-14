@@ -3,15 +3,32 @@
 
 {% block head %}
 <script>
+  let _stale = false;
+
+  function setStale(stale) {
+    if (_stale === stale) return;
+    _stale = stale;
+    const badge = document.getElementById('refresh-badge');
+    if (!badge) return;
+    if (stale) {
+      badge.textContent = '{{ _("Disconnected") }}';
+      badge.className   = 'badge badge-error';
+    } else {
+      badge.textContent = '{{ _("Live") }}';
+      badge.className   = 'badge badge-connected';
+    }
+  }
+
   function refreshStatus() {
     fetch(location.href)
       .then(r => r.text())
       .then(html => {
-        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const doc  = new DOMParser().parseFromString(html, 'text/html');
         const next = doc.querySelector('main');
-        if (next) document.querySelector('main').innerHTML = next.innerHTML;
+        if (next) document.querySelector('main').replaceWith(next);
+        setStale(false);
       })
-      .catch(() => {})
+      .catch(() => setStale(true))
       .finally(() => setTimeout(refreshStatus, 5000));
   }
   setTimeout(refreshStatus, 5000);
@@ -20,8 +37,11 @@
 
 {% block content %}
 <div class="card">
-  <h2>{{ _('Driver Status') }}</h2>
-  <p style="color:var(--muted); font-size:0.85rem;">{{ _('Auto-refreshes every 5 seconds.') }}</p>
+  <div class="status-header">
+    <h2>{{ _('Driver Status') }}</h2>
+    <span id="refresh-badge" class="badge badge-connected">{{ _('Live') }}</span>
+  </div>
+  <p class="status-subtitle">{{ _('Auto-refreshes every 5 seconds.') }}</p>
 </div>
 
 {% if statuses %}
@@ -35,7 +55,7 @@
       </span>
     </div>
     {% if info.get('messages') %}
-    <ul style="color:var(--muted); font-size:0.88rem; padding-inline-start:1.25rem;">
+    <ul class="driver-messages">
       {% for msg in info['messages'] %}
         <li>{{ msg }}</li>
       {% endfor %}
@@ -45,7 +65,7 @@
   {% endfor %}
 {% else %}
   <div class="card">
-    <p style="color:var(--muted);">{{ _('No drivers loaded. Check config.ini → [rpidriver] drivers.') }}</p>
+    <p class="muted-text">{{ _('No drivers loaded. Check config.ini → [rpidriver] drivers.') }}</p>
   </div>
 {% endif %}
 {% endblock %}

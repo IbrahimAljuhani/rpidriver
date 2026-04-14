@@ -1,20 +1,16 @@
 from setuptools import setup, find_packages
 
+from rpidriver.__version__ import __version__
+
 try:
     with open("README.md", "r", encoding="utf-8") as f:
         long_description = f.read()
 except FileNotFoundError:
     long_description = "Smart hardware proxy for Odoo POS — built for Raspberry Pi"
 
-try:
-    with open("requirements.txt") as f:
-        install_requires = [line.strip() for line in f if line.strip() and not line.startswith("#")]
-except FileNotFoundError:
-    install_requires = []
-
 setup(
     name="rpidriver",
-    version="1.0.0",
+    version=__version__,
     author="Ibrahim Aljuhani",
     author_email="info@ia.sa",
     description="Smart hardware proxy for Odoo POS — built for Raspberry Pi",
@@ -31,8 +27,23 @@ setup(
             "translations/*/LC_MESSAGES/*.mo",
         ],
     },
-    install_requires=install_requires,
+    install_requires=[
+        "Flask>=2.3",
+        "Flask-Babel>=4.0,<5.0",
+        "Flask-Cors>=4.0,<5.0",
+        "pyserial>=3.5",
+        "Pillow>=10.0",
+        "arabic-reshaper>=3.0",
+        "python-bidi>=0.4.2,<0.7",
+        "pyusb>=1.2",
+        "requests>=2.28",
+    ],
     extras_require={
+        # pip install rpidriver[neoleap]
+        "neoleap": ["websocket-client>=1.6"],
+        # pip install rpidriver[cups]  (Linux only — requires libcups2-dev)
+        "cups": ["pycups>=2.0"],
+        # pip install rpidriver[dev]
         "dev": [
             "pytest>=7.0",
             "pytest-cov>=4.0",

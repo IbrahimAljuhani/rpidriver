@@ -10,18 +10,31 @@ GET  /api/logs                Return last N log lines as JSON
 GET  /api/logs/stream         Server-Sent Events: live log tail
 """
 
+import functools
 import logging
 import os
 import subprocess
 from configparser import ConfigParser
 
-from flask import Blueprint, Response, jsonify, request, stream_with_context
+from flask import Blueprint, Response, jsonify, request, session, stream_with_context
 
 from rpidriver.config_schema import AVAILABLE_DRIVERS, CONFIG_SCHEMA
 
 logger = logging.getLogger(__name__)
 
 bp = Blueprint("api", __name__, url_prefix="/api")
+
+
+def _require_auth(f):
+    """Protect API endpoints with the same session-based auth as the dashboard."""
+    @functools.wraps(f)
+    def wrapper(*args, **kwargs):
+        from rpidriver import get_config
+        pwd = get_config().get("rpidriver", "dashboard_password", fallback="").strip()
+        if pwd and not session.get("authenticated"):
+            return jsonify({"error": "Unauthorized"}), 401
+        return f(*args, **kwargs)
+    return wrapper
 
 _SERVICE_NAME = "rpidriver"
 
@@ -63,6 +76,7 @@ def _merge_defaults(raw: dict) -> dict:
 # ── Config endpoints ──────────────────────────────────────────────────────────
 
 @bp.route("/config", methods=["GET"])
+@_require_auth
 def config_get():
     """Return the current configuration as JSON (merged with schema defaults)."""
     cfg = _read_cfg()
@@ -71,6 +85,7 @@ def config_get():
 
 
 @bp.route("/config", methods=["POST"])
+@_require_auth
 def config_save():
     """
     Write posted JSON values to config.ini.
@@ -86,8 +101,11 @@ def config_save():
         if not isinstance(fields, dict):
             continue
 
-        # Validate section and keys against schema
-        schema_section = CONFIG_SCHEMA.get(section, {})
+        # Reject sections not defined in the schema
+        schema_section = CONFIG_SCHEMA.get(section)
+        if schema_section is None:
+            logger.warning("api.config_save: unknown section %r — skipped", section)
+            continue
 
         if not cfg.has_section(section):
             cfg.add_section(section)
@@ -95,6 +113,12 @@ def config_save():
         for key, value in fields.items():
             if key.startswith("_"):
                 continue
+
+            # Reject keys not defined in the schema
+            if key not in schema_section:
+                logger.warning("api.config_save: unknown key %r in [%s] — skipped", key, section)
+                continue
+
             str_val = str(value).strip()
 
             # Detect restart-required changes
@@ -120,6 +144,7 @@ def config_save():
 # ── Service control ───────────────────────────────────────────────────────────
 
 @bp.route("/service/restart", methods=["POST"])
+@_require_auth
 def service_restart():
     """
     Restart the rpidriver systemd service via sudo.
@@ -170,6 +195,7 @@ def service_restart():
 # ── Log endpoints ─────────────────────────────────────────────────────────────
 
 @bp.route("/logs")
+@_require_auth
 def logs_get():
     """
     GET /api/logs?lines=200
@@ -198,6 +224,7 @@ def logs_get():
 
 
 @bp.route("/logs/stream")
+@_require_auth
 def logs_stream():
     """
     GET /api/logs/stream
@@ -229,7 +256,8 @@ def logs_stream():
                 line = line.rstrip()
                 if line:
                     # SSE format: "data: <payload>\n\n"
-                    yield f"data: {line}\n\n"
+                    # Replace any embedded newlines so they don't break SSE framing
+                    yield f"data: {line.replace(chr(10), ' ')}\n\n"
                 # Detect if journalctl died unexpectedly
                 if proc.poll() is not None:
                     yield "data: (log stream ended — service may have stopped)\n\n"
@@ -241,7 +269,10 @@ def logs_stream():
                 proc.terminate()
                 proc.wait(timeout=3)
             except Exception:
-                pass
+                try:
+                    proc.kill()
+                except Exception:
+                    pass
 
     return Response(
         generate(),

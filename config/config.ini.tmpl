@@ -28,6 +28,17 @@ debug = false
 # ssl_cert = /etc/rpidriver/ssl/cert.pem
 # ssl_key  = /etc/rpidriver/ssl/key.pem
 
+# ── Dashboard authentication ──────────────────────────────────────────────────
+# Set a password to protect the web dashboard from unauthorized access.
+# Leave blank (default) to keep the dashboard open — suitable for isolated LANs.
+# dashboard_password = changeme
+
+# ── CORS allowed origins ──────────────────────────────────────────────────────
+# Origins allowed to call /hw_proxy/* endpoints (used by Odoo POS browser JS).
+# Default * allows any Odoo instance. Restrict if desired:
+#   cors_origins = https://odoo.example.com
+cors_origins = *
+
 # ── Plugin loader ─────────────────────────────────────────────────────────────
 # Comma-separated list of plugin module names to load.
 # Available: escpos_driver, scale_driver, display_driver, cups_driver, neoleap_driver
@@ -117,8 +128,10 @@ printer_name = Receipt_Printer
 # The terminal must be reachable from this Raspberry Pi.
 neoleap_ip = 192.168.1.100
 
-# 8-digit Terminal ID assigned by the acquiring bank (e.g. Al Rajhi, SNB).
-# Printed on the terminal configuration receipt or provided by the bank.
+# Terminal ID — one of two formats:
+#   8 digits  — bank TID assigned by the acquiring bank (Al Rajhi, SNB …)
+#   16 digits — device TID shown on the terminal configuration screen
+# Check your terminal: tap Menu → About → Terminal ID.
 terminal_id = 12345678
 
 # WebSocket port used by the NeoLeap app.

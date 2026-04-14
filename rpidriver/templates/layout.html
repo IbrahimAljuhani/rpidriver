@@ -19,18 +19,25 @@
   <a class="brand" href="{{ url_for('views.index') }}">RPiDriver</a>
   {% set ep = request.endpoint %}
   <ul>
-    <li><a href="{{ url_for('views.index') }}"       {% if ep == 'views.index'       %}class="active"{% endif %}>{{ _('Home') }}</a></li>
-    <li><a href="{{ url_for('views.status') }}"      {% if ep == 'views.status'      %}class="active"{% endif %}>{{ _('Status') }}</a></li>
-    <li><a href="{{ url_for('views.config') }}"      {% if ep == 'views.config'      %}class="active"{% endif %}>{{ _('Config') }}</a></li>
-    <li><a href="{{ url_for('views.logs') }}"        {% if ep == 'views.logs'        %}class="active"{% endif %}>{{ _('Logs') }}</a></li>
-    <li><a href="{{ url_for('views.system') }}"      {% if ep == 'views.system'      %}class="active"{% endif %}>{{ _('System') }}</a></li>
-    <li><a href="{{ url_for('views.usb_devices') }}" {% if ep == 'views.usb_devices' %}class="active"{% endif %}>{{ _('USB') }}</a></li>
+    <li><a href="{{ url_for('views.index') }}"       {% if ep == 'views.index'       %}class="active" aria-current="page"{% endif %}>{{ _('Home') }}</a></li>
+    <li><a href="{{ url_for('views.status') }}"      {% if ep == 'views.status'      %}class="active" aria-current="page"{% endif %}>{{ _('Status') }}</a></li>
+    <li><a href="{{ url_for('views.config') }}"      {% if ep == 'views.config'      %}class="active" aria-current="page"{% endif %}>{{ _('Config') }}</a></li>
+    <li><a href="{{ url_for('views.logs') }}"        {% if ep == 'views.logs'        %}class="active" aria-current="page"{% endif %}>{{ _('Logs') }}</a></li>
+    <li><a href="{{ url_for('views.system') }}"      {% if ep == 'views.system'      %}class="active" aria-current="page"{% endif %}>{{ _('System') }}</a></li>
+    <li><a href="{{ url_for('views.usb_devices') }}" {% if ep == 'views.usb_devices' %}class="active" aria-current="page"{% endif %}>{{ _('USB') }}</a></li>
   </ul>
-  {% if locale == 'ar' %}
-    <a class="lang-toggle" href="{{ url_for('views.set_language', locale='en') }}">English</a>
-  {% else %}
-    <a class="lang-toggle" href="{{ url_for('views.set_language', locale='ar') }}">العربية</a>
-  {% endif %}
+  <div class="nav-actions">
+    {% if locale == 'ar' %}
+      <a class="lang-toggle" href="{{ url_for('views.set_language', locale='en') }}">English</a>
+    {% else %}
+      <a class="lang-toggle" href="{{ url_for('views.set_language', locale='ar') }}">العربية</a>
+    {% endif %}
+    {% if session.get('authenticated') %}
+      <a class="lang-toggle lang-toggle-danger" href="{{ url_for('views.logout') }}">
+        {{ _('Logout') }}
+      </a>
+    {% endif %}
+  </div>
 </nav>
 
 <main>

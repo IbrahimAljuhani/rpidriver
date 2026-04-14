@@ -34,6 +34,9 @@ rm -rf "$INSTALL_DIR"
 warning "Config directory $CONFIG_DIR was NOT removed (preserve your settings)."
 warning "To remove it manually: sudo rm -rf $CONFIG_DIR"
 
+info "Removing sudoers entry..."
+rm -f /etc/sudoers.d/rpidriver
+
 info "Removing system user..."
 userdel "$RUN_USER" 2>/dev/null || true
 

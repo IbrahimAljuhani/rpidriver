@@ -110,7 +110,7 @@ if [[ ! -f "$SSL_DIR/cert.pem" ]]; then
         -days   3650 \
         -nodes \
         -subj   "/C=SA/O=RPiDriver/CN=rpidriver" \
-        -addext "subjectAltName=IP:${PI_IP},DNS:rpidriver.local" \
+        -addext "subjectAltName=IP:${PI_IP},IP:127.0.0.1,DNS:rpidriver.local" \
         2>/dev/null
     chmod 600 "$SSL_DIR/key.pem"
     chmod 644 "$SSL_DIR/cert.pem"

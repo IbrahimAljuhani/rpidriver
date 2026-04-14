@@ -56,16 +56,22 @@ def create_app(config_path=None):
         )
     app.secret_key = _secret
 
-    # ── CORS — allow Odoo browser JS to reach all /hw_proxy/* endpoints ──────
-    # Odoo POS runs in the browser and makes XHR requests directly to this
-    # server. Without CORS headers the browser blocks every request.
-    CORS(app, resources={r"/hw_proxy/*": {"origins": "*"}})
-
     # ── Config ──────────────────────────────────────────────────────────────
     if config_path:
         os.environ["RPIDRIVER_CONFIG"] = config_path
     config = get_config(app)
     app.config["RPIDRIVER_CONFIG"] = config
+
+    # ── CORS — allow Odoo browser JS to reach all /hw_proxy/* endpoints ──────
+    # Odoo POS runs in the browser and makes XHR requests directly to this
+    # server. Without CORS headers the browser blocks every request.
+    # cors_origins defaults to "*"; restrict via [rpidriver] cors_origins in
+    # config.ini (e.g. "https://odoo.example.com") for a locked-down setup.
+    _cors_origins = config.get("rpidriver", "cors_origins", fallback="*").strip() or "*"
+    CORS(app, resources={r"/hw_proxy/*": {"origins": _cors_origins}})
+
+    # ── Request size limit — 1 MB for print jobs (base64 JPEG receipts) ──────
+    app.config["MAX_CONTENT_LENGTH"] = 1 * 1024 * 1024
 
     # Stop any running drivers from a previous create_app() call (e.g. in tests),
     # then clear the registry so it doesn't accumulate stale instances.

@@ -199,7 +199,7 @@ class NeoLeapDriver(PaymentTerminalDriver):
         import socket as _sock
         try:
             s = _sock.socket(_sock.AF_INET, _sock.SOCK_STREAM)
-            s.settimeout(3)
+            s.settimeout(5)
             s.connect((self._neoleap_ip, self._port))
             s.close()
             self.set_status("connected")

@@ -8,7 +8,7 @@ INSTALL_DIR="/opt/rpidriver"
 VENV_DIR="$INSTALL_DIR/.venv"
 SERVICE_NAME="rpidriver"
 
-GREEN='\033[0;32m'; NC='\033[0m'
+RED='\033[0;31m'; GREEN='\033[0;32m'; NC='\033[0m'
 info() { echo -e "${GREEN}[rpidriver]${NC} $*"; }
 
 [[ $EUID -eq 0 ]] || { echo "Run as root."; exit 1; }

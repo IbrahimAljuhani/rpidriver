@@ -2,13 +2,15 @@
 Web interface views for RPiDriver dashboard.
 """
 
+import functools
 import logging
 import os
 import platform
+import secrets
 import socket
 import subprocess
 
-from flask import Blueprint, jsonify, render_template, redirect, \
+from flask import Blueprint, jsonify, render_template, redirect, request, \
     session, url_for, Response
 from flask_babel import gettext as _
 
@@ -21,12 +23,56 @@ def _get_drivers():
     return get_drivers()
 
 
+def _dashboard_password() -> str:
+    """Return the configured dashboard password, or '' if auth is disabled."""
+    from rpidriver import get_config
+    return get_config().get("rpidriver", "dashboard_password", fallback="").strip()
+
+
+def require_auth(f):
+    """
+    Decorator: redirect to /login if a dashboard password is configured and
+    the user has not authenticated.  When no password is set the decorator
+    is a no-op (backward-compatible for LAN-only setups).
+    """
+    @functools.wraps(f)
+    def wrapper(*args, **kwargs):
+        if _dashboard_password() and not session.get("authenticated"):
+            return redirect(url_for("views.login", next=request.path))
+        return f(*args, **kwargs)
+    return wrapper
+
+
+@bp.route("/login", methods=["GET", "POST"])
+def login():
+    error = None
+    if request.method == "POST":
+        pwd = _dashboard_password()
+        if pwd and secrets.compare_digest(request.form.get("password", ""), pwd):
+            session.clear()
+            session["authenticated"] = True
+            next_url = request.args.get("next", "")
+            if not next_url.startswith("/") or next_url.startswith("//"):
+                next_url = url_for("views.index")
+            return redirect(next_url)
+        logger.warning("login: failed attempt from %s", request.remote_addr)
+        error = _("Invalid password.")
+    return render_template("login.html", error=error)
+
+
+@bp.route("/logout")
+def logout():
+    session.pop("authenticated", None)
+    return redirect(url_for("views.index"))
+
+
 @bp.route("/")
 def index():
     return render_template("index.html")
 
 
 @bp.route("/status")
+@require_auth
 def status():
     drivers = _get_drivers()
     statuses = {}
@@ -40,6 +86,7 @@ def status():
 
 
 @bp.route("/system")
+@require_auth
 def system():
     # UDP-socket trick: connecting to an external address (no packet sent)
     # forces the OS to choose the correct outbound interface IP — avoids
@@ -77,7 +124,7 @@ def system():
             with open("/sys/class/thermal/thermal_zone0/temp") as _f:
                 _milli = int(_f.read().strip())
                 info["temperature"] = f"{_milli / 1000:.1f} °C"
-        except OSError:
+        except (OSError, ValueError):
             info["temperature"] = _("N/A")
 
     ssl_info = _get_ssl_info()
@@ -115,6 +162,7 @@ def _get_ssl_info() -> dict:
 
 
 @bp.route("/ssl/generate", methods=["POST"])
+@require_auth
 def ssl_generate():
     """
     POST /ssl/generate
@@ -192,6 +240,7 @@ def ssl_generate():
 
 
 @bp.route("/ssl/cert.pem")
+@require_auth
 def ssl_download_cert():
     """
     GET /ssl/cert.pem
@@ -221,6 +270,7 @@ def ssl_download_cert():
 
 
 @bp.route("/config")
+@require_auth
 def config():
     from rpidriver.config_schema import AVAILABLE_DRIVERS, DRIVER_LABELS, CONFIG_SCHEMA
     from rpidriver.api import _read_cfg, _cfg_to_dict, _merge_defaults
@@ -239,11 +289,13 @@ def config():
 
 
 @bp.route("/logs")
+@require_auth
 def logs():
     return render_template("logs.html")
 
 
 @bp.route("/usb_devices")
+@require_auth
 def usb_devices():
     devices = []
     try:

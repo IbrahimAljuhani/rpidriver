@@ -293,10 +293,10 @@ def serial_read():
             logger.exception("serial_read via serial_driver failed: %s", exc)
             return _jsonrpc_error(str(exc), req_id=req_id)
 
-    # No serial_driver loaded — reject. Direct device access is intentionally
-    # disabled to prevent unauthorized access to hardware from the network.
+    # No serial_driver loaded — reject.
     return _jsonrpc_error(
-        "serial_driver is not loaded. Enable it in config.ini → [rpidriver] drivers.",
+        "serial_driver is not implemented in this release. "
+        "Use scale_driver for serial scales.",
         req_id=req_id,
     )
 
@@ -342,10 +342,10 @@ def serial_write():
             logger.exception("serial_write via serial_driver failed: %s", exc)
             return _jsonrpc_error(str(exc), req_id=req_id)
 
-    # No serial_driver loaded — reject. Direct device access is intentionally
-    # disabled to prevent unauthorized access to hardware from the network.
+    # No serial_driver loaded — reject.
     return _jsonrpc_error(
-        "serial_driver is not loaded. Enable it in config.ini → [rpidriver] drivers.",
+        "serial_driver is not implemented in this release. "
+        "Use scale_driver for serial scales.",
         req_id=req_id,
     )
 

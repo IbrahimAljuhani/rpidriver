@@ -11,9 +11,15 @@
       <tr><th>{{ _('Platform') }}</th><td>{{ info.platform }}</td></tr>
       <tr><th>{{ _('Python') }}</th><td>{{ info.python }}</td></tr>
       <tr><th>{{ _('Architecture') }}</th><td>{{ info.arch }}</td></tr>
-      <tr><th>{{ _('CPU Temperature') }}</th><td>{{ info.temperature }}</td></tr>
+      <tr>
+        <th>{{ _('CPU Temperature') }}</th>
+        <td id="temp-cell">{{ info.temperature }}</td>
+      </tr>
     </tbody>
   </table>
+  <div id="temp-warning" class="notice notice-danger" style="display:none;margin-top:.75rem;">
+    ⚠️ {{ _('CPU temperature is critical (≥ 80 °C). RPiDriver may throttle or crash.') }}
+  </div>
 </div>
 
 <div class="card">
@@ -58,12 +64,11 @@
   </table>
 
   {% if not ssl.enabled %}
-  <div class="ssl-notice ssl-warn">
+  <div class="notice notice-warn">
     <strong>⚠️ {{ _('HTTPS is disabled.') }}</strong><br>
     {{ _('Odoo 17+ running on HTTPS cannot connect to an HTTP proxy — the browser blocks mixed-content requests.') }}
   </div>
 
-  <!-- Generate certificate button -->
   <div style="margin-top:1rem;">
     <button id="ssl-gen-btn" class="btn btn-primary" onclick="generateCert()">
       🔐 {{ _('Generate SSL Certificate') }}
@@ -71,38 +76,8 @@
     <span id="ssl-gen-status" style="margin-inline-start:.75rem;font-size:.875rem;"></span>
   </div>
 
-  <script>
-  async function generateCert() {
-    const btn    = document.getElementById('ssl-gen-btn');
-    const status = document.getElementById('ssl-gen-status');
-    btn.disabled = true;
-    status.textContent = '{{ _("Generating…") }}';
-
-    try {
-      const resp = await fetch('{{ url_for("views.ssl_generate") }}', { method: 'POST' });
-      const data = await resp.json();
-
-      if (data.success) {
-        status.style.color = '#16a34a';
-        status.innerHTML =
-          '✅ {{ _("Certificate generated for IP") }} <strong>' + data.ip + '</strong>. ' +
-          '<strong>{{ _("Restart RPiDriver to enable HTTPS:") }}</strong> ' +
-          '<code>sudo systemctl restart rpidriver</code>';
-      } else {
-        status.style.color = '#dc2626';
-        status.textContent = '❌ ' + (data.error || '{{ _("Unknown error") }}');
-        btn.disabled = false;
-      }
-    } catch (err) {
-      status.style.color = '#dc2626';
-      status.textContent = '❌ ' + err.message;
-      btn.disabled = false;
-    }
-  }
-  </script>
-
   {% else %}
-  <div class="ssl-notice ssl-info">
+  <div class="notice notice-info">
     <strong>💡 {{ _('First-time setup:') }}</strong>
     {{ _('Open') }} <code>https://{{ info.ip }}:8069</code>
     {{ _('in your browser and accept the certificate warning once before connecting Odoo POS.') }}
@@ -113,7 +88,7 @@
 {# ── Service control ── #}
 <div class="card">
   <h2>{{ _('Service Control') }}</h2>
-  <p style="font-size:.88rem;color:var(--text-muted,#6b7280);margin-bottom:1rem;">
+  <p class="muted-text" style="margin-bottom:1rem;">
     {{ _('Restart RPiDriver to apply configuration changes.') }}
   </p>
   <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
@@ -122,34 +97,85 @@
     </button>
     <span id="restart-status" style="font-size:.875rem;"></span>
   </div>
-  <p style="margin-top:.75rem;font-size:.78rem;color:var(--text-muted,#6b7280);">
+  <p class="hint" style="margin-top:.75rem;">
     {{ _('or run:') }} <code>sudo systemctl restart rpidriver</code>
   </p>
 </div>
 
 <script>
+// ── Thermal indicator ──────────────────────────────────────────────────────
+(function () {
+  const cell    = document.getElementById('temp-cell');
+  const warning = document.getElementById('temp-warning');
+  if (!cell) return;
+  const match = cell.textContent.match(/[\d.]+/);
+  if (!match) return;
+  const t = parseFloat(match[0]);
+  if (t >= 80) {
+    cell.className = 'temp-hot';
+    warning.style.display = '';
+  } else if (t >= 60) {
+    cell.className = 'temp-warm';
+  }
+})();
+
+// ── SSL cert generation ────────────────────────────────────────────────────
+async function generateCert() {
+  const btn    = document.getElementById('ssl-gen-btn');
+  const status = document.getElementById('ssl-gen-status');
+  btn.disabled      = true;
+  status.className  = '';
+  status.textContent = '{{ _("Generating…") }}';
+
+  try {
+    const resp = await fetch('{{ url_for("views.ssl_generate") }}', { method: 'POST' });
+    const data = await resp.json();
+
+    if (data.success) {
+      status.className = 'action-status action-success';
+      const ip      = document.createElement('strong');
+      ip.textContent = data.ip;
+      const restart = document.createElement('strong');
+      restart.textContent = ' {{ _("Restart RPiDriver to enable HTTPS:") }} ';
+      const cmd = document.createElement('code');
+      cmd.textContent = 'sudo systemctl restart rpidriver';
+      status.textContent = '✅ {{ _("Certificate generated for IP") }} ';
+      status.append(ip, restart, cmd);
+    } else {
+      status.className  = 'action-status action-error';
+      status.textContent = '❌ ' + (data.error || '{{ _("Unknown error") }}');
+      btn.disabled = false;
+    }
+  } catch (err) {
+    status.className  = 'action-status action-error';
+    status.textContent = '❌ ' + err.message;
+    btn.disabled = false;
+  }
+}
+
+// ── Service restart ────────────────────────────────────────────────────────
 async function restartRpidriver() {
   const btn = document.getElementById('restart-btn');
   const el  = document.getElementById('restart-status');
   btn.disabled  = true;
-  el.style.color = '';
+  el.className  = '';
   el.textContent = '{{ _("Restarting…") }}';
 
   try {
     const resp = await fetch('/api/service/restart', { method: 'POST' });
     const data = await resp.json();
     if (data.success) {
-      el.style.color  = '#16a34a';
-      el.textContent  = '✅ {{ _("Restarted.  Reconnecting…") }}';
+      el.className  = 'action-status action-success';
+      el.textContent = '✅ {{ _("Restarted.  Reconnecting…") }}';
       setTimeout(() => location.reload(), 4000);
     } else {
-      el.style.color  = '#dc2626';
-      el.textContent  = '❌ ' + (data.error || '{{ _("Failed") }}');
+      el.className  = 'action-status action-error';
+      el.textContent = '❌ ' + (data.error || '{{ _("Failed") }}');
       btn.disabled = false;
     }
   } catch (err) {
-    el.style.color  = '#dc2626';
-    el.textContent  = '❌ ' + err.message;
+    el.className  = 'action-status action-error';
+    el.textContent = '❌ ' + err.message;
     btn.disabled = false;
   }
 }

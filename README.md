@@ -59,7 +59,10 @@ RPiDriver is the answer: a single `curl` command turns a $35 Raspberry Pi into a
 | **Odoo 17, 18 & 19** | Full hw_proxy protocol — verified against all three versions |
 | **Image Receipt Printing** | Odoo 17+ sends base64 JPEG receipts — rendered and printed natively |
 | **Cash Drawer** | ESC p pulse command triggered from Odoo POS |
+| **Mada Payment Terminal** | NeoLeap N950 over WebSocket — no IoT Box, no bank middleware |
 | **Bilingual Dashboard** | Web interface in Arabic and English with RTL layout |
+| **Web Config Panel** | Edit all settings from the browser — no SSH needed |
+| **Live Log Viewer** | Real-time journal streaming with color-coded output |
 | **Serial Scale Support** | Mettler Toledo 8217 (7E1) and Adam Equipment (8N1) protocols |
 | **Customer Display** | Bixolon BCD-1000/1100, Epson OCD300 — 2×20 LCD over USB-CDC |
 | **CUPS Network Printing** | Send jobs to shared CUPS printers over the network via IPP |
@@ -73,14 +76,11 @@ RPiDriver is the answer: a single `curl` command turns a $35 Raspberry Pi into a
 
 | Feature | Details |
 |---|---|
-| **Web Config Panel** | Edit all settings from the browser — no SSH needed |
-| **OTA Updates** | One-click updates from the dashboard |
-| **Watchdog + Alerts** | Telegram notifications on hardware failures |
-| **Visual Event Log** | Real-time status and error history |
-| **SSL Certificate** | Signed certificate from ia.sa — zero setup |
+| **Watchdog + Alerts** | Telegram / WhatsApp notifications on hardware failures |
 | **Config Backup** | Automated settings backup and restore |
+| **Multi-Device Dashboard** | Manage multiple Raspberry Pi devices from one panel |
 | **Email Support** | 48-hour response guarantee |
-| **Commercial License** | No AGPL obligations |
+| **Commercial License** | No AGPL obligations — use in closed-source products |
 
 > $9/month per device · $79/year · [Contact info@ia.sa](mailto:info@ia.sa)
 
@@ -119,28 +119,36 @@ RPiDriver is the answer: a single `curl` command turns a $35 Raspberry Pi into a
 | Bixolon | BCD-1000, BCD-1100 | USB-CDC (ttyACM) |
 | Epson | OCD300 | RS-232 |
 
+### Mada Payment Terminals
+
+| Brand | Model | Connection | Port |
+|---|---|---|---|
+| NeoLeap | N950 | WiFi (WebSocket) | 9998 |
+
+> Requires the `ia_mada_rpidriver` Odoo module — see [Modules](https://ia.sa/rpidriver/docs/modules).
+
 ---
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────┐
-│              Odoo POS (browser)             │
-└──────────────────┬──────────────────────────┘
-                   │  hw_proxy / JSON-RPC 2.0
-                   ▼
-┌─────────────────────────────────────────────┐
-│         RPiDriver  (Raspberry Pi)           │
-│                                             │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  │
-│  │  escpos  │  │  scale   │  │ display  │  │
-│  │  driver  │  │  driver  │  │  driver  │  │
-│  └────┬─────┘  └────┬─────┘  └────┬─────┘  │
-└───────┼──────────────┼──────────────┼───────┘
-        │              │              │
-        ▼              ▼              ▼
-   ESC/POS          Toledo /       Customer
-   Printer          Adam Scale     Display
+┌─────────────────────────────────────────────────────────┐
+│                  Odoo POS (browser)                     │
+└────────────────────────┬────────────────────────────────┘
+                         │  hw_proxy / JSON-RPC 2.0
+                         ▼
+┌─────────────────────────────────────────────────────────┐
+│              RPiDriver  (Raspberry Pi)                  │
+│                                                         │
+│  ┌──────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐  │
+│  │  escpos  │  │  scale  │  │ display │  │ neoleap │  │
+│  │  driver  │  │  driver │  │  driver │  │  driver │  │
+│  └────┬─────┘  └────┬────┘  └────┬────┘  └────┬────┘  │
+└───────┼─────────────┼────────────┼─────────────┼───────┘
+        │             │            │             │
+        ▼             ▼            ▼             ▼ WebSocket
+   ESC/POS        Toledo /     Customer       NeoLeap
+   Printer        Adam Scale   Display        N950 Terminal
 ```
 
 RPiDriver exposes a local Flask server on port `8069`. Odoo connects to it exactly like it would connect to an official IoT Box — no Odoo module required, no cloud dependency.
@@ -158,6 +166,9 @@ RPiDriver exposes a local Flask server on port `8069`. Odoo connects to it exact
 | `/hw_proxy/open_cashbox` | POST | Dedicated cash drawer (Odoo 13–16) |
 | `/hw_proxy/send_text_customer_display` | POST | Show text on customer display |
 | `/hw_proxy/log` | POST | Receive and log POS client messages |
+| `/hw_proxy/payment_terminal_transaction_start` | POST | Start a Mada payment transaction |
+| `/hw_proxy/payment_terminal_transaction_status` | POST | Poll transaction status |
+| `/hw_proxy/payment_terminal_transaction_cancel` | POST | Cancel active transaction |
 
 ---
 
@@ -267,12 +278,15 @@ printer_name = Receipt_Printer
 - [x] systemd service with secret key management
 - [x] udev rules for all device types
 - [x] SSL / HTTPS with auto-generated self-signed certificate
+- [x] NeoLeap N950 Mada payment terminal (WebSocket, dual JSON+XML response format)
+- [x] Web config panel — edit all settings from the browser
+- [x] Live log viewer — real-time journal streaming (SSE + polling fallback)
+- [x] Service restart button — no SSH needed
 - [x] `v1.0.0` — Initial public release
 - [ ] Debian package for Ubuntu 24.04 ARM64
-- [ ] RPiDriver Pro — Web config panel
-- [ ] RPiDriver Pro — OTA updates
 - [ ] RPiDriver Pro — Watchdog + Telegram alerts
-- [ ] Multi-device dashboard
+- [ ] RPiDriver Pro — Config backup and restore
+- [ ] RPiDriver Pro — Multi-device dashboard
 
 ---
 

@@ -16,6 +16,25 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
+# ── Auth ─────────────────────────────────────────────────────────────────────
+msgid "Login"
+msgstr "Login"
+
+msgid "Dashboard Login"
+msgstr "Dashboard Login"
+
+msgid "Password"
+msgstr "Password"
+
+msgid "Sign in"
+msgstr "Sign in"
+
+msgid "Invalid password."
+msgstr "Invalid password."
+
+msgid "Logout"
+msgstr "Logout"
+
 # ── Navigation ────────────────────────────────────────────────────────────────
 msgid "Home"
 msgstr "Home"
@@ -337,14 +356,26 @@ msgstr "TCP port for the RPiDriver server."
 msgid "Enable Flask debug mode.  Never use in production."
 msgstr "Enable Flask debug mode.  Never use in production."
 
+msgid "Dashboard Password"
+msgstr "Dashboard Password"
+
+msgid "Password to access the web dashboard.  Leave empty to disable authentication (LAN-only setups)."
+msgstr "Password to access the web dashboard.  Leave empty to disable authentication (LAN-only setups)."
+
+msgid "CORS Allowed Origins"
+msgstr "CORS Allowed Origins"
+
+msgid "Origins allowed to call /hw_proxy/* endpoints.  Use * to allow any Odoo instance."
+msgstr "Origins allowed to call /hw_proxy/* endpoints.  Use * to allow any Odoo instance."
+
 msgid "IP address of the NeoLeap terminal on the local network."
 msgstr "IP address of the NeoLeap terminal on the local network."
 
-msgid "8-digit Terminal ID provided by the acquiring bank (Al Rajhi, SNB …)."
-msgstr "8-digit Terminal ID provided by the acquiring bank (Al Rajhi, SNB …)."
+msgid "Terminal ID: either the 8-digit bank TID (Al Rajhi, SNB …) or the 16-digit device TID shown on the terminal screen."
+msgstr "Terminal ID: either the 8-digit bank TID (Al Rajhi, SNB …) or the 16-digit device TID shown on the terminal screen."
 
-msgid "NeoLeap WebSocket port.  Do not change unless instructed by NeoLeap."
-msgstr "NeoLeap WebSocket port.  Do not change unless instructed by NeoLeap."
+msgid "NeoLeap WebSocket port.  N950 uses 9998.  Do not change unless instructed by NeoLeap."
+msgstr "NeoLeap WebSocket port.  N950 uses 9998.  Do not change unless instructed by NeoLeap."
 
 msgid "Seconds to wait for the customer to complete a payment."
 msgstr "Seconds to wait for the customer to complete a payment."

@@ -16,6 +16,25 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=6; plural=n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 ? 4 : 5;\n"
 
+# ── Auth ─────────────────────────────────────────────────────────────────────
+msgid "Login"
+msgstr "تسجيل الدخول"
+
+msgid "Dashboard Login"
+msgstr "دخول لوحة التحكم"
+
+msgid "Password"
+msgstr "كلمة المرور"
+
+msgid "Sign in"
+msgstr "دخول"
+
+msgid "Invalid password."
+msgstr "كلمة المرور غير صحيحة."
+
+msgid "Logout"
+msgstr "خروج"
+
 # ── Navigation ────────────────────────────────────────────────────────────────
 msgid "Home"
 msgstr "الرئيسية"
@@ -76,7 +95,7 @@ msgid "Protocol"
 msgstr "البروتوكول"
 
 msgid "Auto-refreshes every 5 seconds."
-msgstr "يتحدث تلقائياً كل 5 ثوانٍ."
+msgstr "يُحدَّث تلقائياً كل 5 ثوانٍ."
 
 # ── Status page ───────────────────────────────────────────────────────────────
 msgid "No drivers loaded. Check config.ini → [rpidriver] drivers."
@@ -340,14 +359,26 @@ msgstr "منفذ TCP لخادم RPiDriver."
 msgid "Enable Flask debug mode.  Never use in production."
 msgstr "تفعيل وضع تشخيص Flask. لا تستخدمه في الإنتاج أبداً."
 
+msgid "Dashboard Password"
+msgstr "كلمة مرور لوحة التحكم"
+
+msgid "Password to access the web dashboard.  Leave empty to disable authentication (LAN-only setups)."
+msgstr "كلمة المرور للوصول إلى لوحة التحكم. اتركها فارغة لتعطيل المصادقة (شبكات LAN المغلقة)."
+
+msgid "CORS Allowed Origins"
+msgstr "الأصول المسموح بها (CORS)"
+
+msgid "Origins allowed to call /hw_proxy/* endpoints.  Use * to allow any Odoo instance."
+msgstr "الأصول المسموح لها باستدعاء /hw_proxy/*. استخدم * للسماح لأي نسخة Odoo."
+
 msgid "IP address of the NeoLeap terminal on the local network."
 msgstr "عنوان IP لطرفية NeoLeap على الشبكة المحلية."
 
-msgid "8-digit Terminal ID provided by the acquiring bank (Al Rajhi, SNB …)."
-msgstr "رقم الطرفية المكوّن من 8 أرقام من البنك (الراجحي، SNB ...)."
+msgid "Terminal ID: either the 8-digit bank TID (Al Rajhi, SNB …) or the 16-digit device TID shown on the terminal screen."
+msgstr "رقم الطرفية: إما 8 أرقام من البنك (الراجحي، SNB ...) أو 16 رقماً من شاشة إعدادات الجهاز."
 
-msgid "NeoLeap WebSocket port.  Do not change unless instructed by NeoLeap."
-msgstr "منفذ WebSocket لـ NeoLeap. لا تغيّر إلا بتعليمات NeoLeap."
+msgid "NeoLeap WebSocket port.  N950 uses 9998.  Do not change unless instructed by NeoLeap."
+msgstr "منفذ WebSocket لـ NeoLeap. N950 يستخدم 9998. لا تغيّر إلا بتعليمات NeoLeap."
 
 msgid "Seconds to wait for the customer to complete a payment."
 msgstr "ثوانٍ الانتظار لإتمام العميل عملية الدفع."

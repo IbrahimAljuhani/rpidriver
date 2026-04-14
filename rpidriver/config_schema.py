@@ -68,6 +68,21 @@ CONFIG_SCHEMA = {
             "help"   : "Enable Flask debug mode.  Never use in production.",
             "restart": True,
         },
+        "dashboard_password": {
+            "type"      : "text",
+            "label"     : "Dashboard Password",
+            "default"   : "",
+            "help"      : "Password to access the web dashboard.  Leave empty to disable authentication (LAN-only setups).",
+            "maxlength" : 128,
+        },
+        "cors_origins": {
+            "type"       : "text",
+            "label"      : "CORS Allowed Origins",
+            "default"    : "*",
+            "placeholder": "* or https://odoo.example.com",
+            "help"       : "Origins allowed to call /hw_proxy/* endpoints.  Use * to allow any Odoo instance.",
+            "restart"    : True,
+        },
     },
 
     "neoleap_driver": {

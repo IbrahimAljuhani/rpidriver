@@ -3,13 +3,11 @@
 
 {% block content %}
 
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem;">
+<div class="logs-toolbar">
   <h2 style="margin:0">{{ _('Live Logs') }}</h2>
-  <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;">
-    <label style="display:flex;align-items:center;gap:.4rem;font-size:.85rem;cursor:pointer;">
-      <input type="checkbox" id="auto-scroll" checked>
-      {{ _('Auto-scroll') }}
-    </label>
+  <div class="logs-controls">
+    <input id="log-search" type="search" class="log-search-input"
+           placeholder="{{ _('Filter…') }}" oninput="applyFilter()" />
     <button class="btn btn-secondary btn-sm" onclick="clearLog()">🗑 {{ _('Clear') }}</button>
     <button class="btn btn-secondary btn-sm" id="pause-btn" onclick="togglePause()">⏸ {{ _('Pause') }}</button>
     <button class="btn btn-secondary btn-sm" onclick="loadRest()">↻ {{ _('Refresh') }}</button>
@@ -18,39 +16,18 @@
 </div>
 
 <div class="card" style="padding:0;overflow:hidden;">
-  <pre id="log-output" style="
-    margin:0; padding:1rem;
-    background:#0f1117; color:#d4d4d8;
-    font-family:'Courier New',Courier,monospace; font-size:.78rem;
-    line-height:1.55;
-    height:calc(100vh - 240px); min-height:300px;
-    overflow-y:auto; overflow-x:auto;
-    white-space:pre; word-break:normal;
-    border-radius:8px;
-  "></pre>
+  <pre id="log-output" class="log-output"></pre>
 </div>
-
-<style>
-.log-error   { color: #f87171; }
-.log-warning { color: #fbbf24; }
-.log-info    { color: #86efac; }
-.log-debug   { color: #93c5fd; }
-.btn-sm { padding:.3rem .75rem; font-size:.82rem; }
-.btn-secondary {
-  background:transparent; border:1px solid var(--border,#e5e7eb); color:var(--text,#1c1c1e);
-}
-.btn-secondary:hover { background:var(--surface,#f9fafb); }
-</style>
 
 <script>
 const output    = document.getElementById('log-output');
 const connBadge = document.getElementById('conn-status');
 const pauseBtn  = document.getElementById('pause-btn');
-const autoScroll= document.getElementById('auto-scroll');
+const searchEl  = document.getElementById('log-search');
 
 let paused    = false;
 let es        = null;
-let sseOk     = false;           // did SSE ever connect successfully?
+let sseOk     = false;
 let pollTimer = null;
 const MAX_LINES = 600;
 
@@ -59,26 +36,50 @@ function escHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-function colorLine(text) {
+function colorClass(text) {
   const t = text.toLowerCase();
   if (t.includes('error') || t.includes('traceback') || t.includes('exception') || t.includes('critical'))
-    return `<span class="log-error">${escHtml(text)}</span>`;
+    return 'log-error';
   if (t.includes('warn'))
-    return `<span class="log-warning">${escHtml(text)}</span>`;
+    return 'log-warning';
   if (t.includes('info'))
-    return `<span class="log-info">${escHtml(text)}</span>`;
+    return 'log-info';
   if (t.includes('debug'))
-    return `<span class="log-debug">${escHtml(text)}</span>`;
-  return escHtml(text);
+    return 'log-debug';
+  return '';
+}
+
+function isAtBottom() {
+  return output.scrollHeight - output.scrollTop - output.clientHeight < 60;
+}
+
+function applyFilter() {
+  const q = searchEl.value.toLowerCase();
+  for (const div of output.children) {
+    div.style.display = (!q || div.textContent.toLowerCase().includes(q)) ? '' : 'none';
+  }
 }
 
 function appendLine(text) {
   if (paused || !text.trim()) return;
-  const div = document.createElement('div');
-  div.innerHTML = colorLine(text);
+  const shouldScroll = isAtBottom();
+  const div  = document.createElement('div');
+  const cls  = colorClass(text);
+  if (cls) {
+    const span = document.createElement('span');
+    span.className   = cls;
+    span.textContent = text;
+    div.appendChild(span);
+  } else {
+    div.textContent = text;
+  }
+  // Apply current filter
+  const q = searchEl.value.toLowerCase();
+  if (q && !text.toLowerCase().includes(q)) div.style.display = 'none';
+
   output.appendChild(div);
   while (output.children.length > MAX_LINES) output.removeChild(output.firstChild);
-  if (autoScroll.checked) output.scrollTop = output.scrollHeight;
+  if (shouldScroll) output.scrollTop = output.scrollHeight;
 }
 
 function setStatus(text, cls) {
@@ -92,12 +93,8 @@ function connectSSE() {
 
   es = new EventSource('/api/logs/stream');
 
-  // If SSE doesn't open within 5 s, fall back to REST polling
   const timeout = setTimeout(() => {
-    if (!sseOk) {
-      es.close();
-      startPoll();
-    }
+    if (!sseOk) { es.close(); startPoll(); }
   }, 5000);
 
   es.onopen = () => {
@@ -111,13 +108,7 @@ function connectSSE() {
 
   es.onerror = () => {
     setStatus('{{ _("Reconnecting…") }}', 'badge-warning');
-    // If SSE worked before, let browser auto-reconnect.
-    // If it never connected, switch to REST poll.
-    if (!sseOk) {
-      clearTimeout(timeout);
-      es.close();
-      startPoll();
-    }
+    if (!sseOk) { clearTimeout(timeout); es.close(); startPoll(); }
   };
 }
 
@@ -129,9 +120,8 @@ async function loadRest() {
     const resp = await fetch('/api/logs?lines=200');
     const data = await resp.json();
     const text = data.logs || '';
-    if (text === _lastLines) return;           // nothing new
+    if (text === _lastLines) return;
     _lastLines = text;
-
     output.innerHTML = '';
     text.split('\n').forEach(line => appendLine(line));
   } catch(e) {

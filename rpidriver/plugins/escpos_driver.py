@@ -13,8 +13,12 @@ import logging
 import queue
 import threading
 
-import usb.core
-import usb.util
+try:
+    import usb.core
+    import usb.util
+    _USB_AVAILABLE = True
+except ImportError:
+    _USB_AVAILABLE = False
 
 from rpidriver.plugins.base_driver import AbstractDriver
 
@@ -181,6 +185,11 @@ class EscposDriver(AbstractDriver):
 
     def _connect(self):
         """Attempt to find and open a USB printer."""
+        if not _USB_AVAILABLE:
+            self.set_status("error", "pyusb not installed — run: pip install pyusb")
+            logger.error("EscposDriver: pyusb not available.")
+            return
+
         # Release resources held by any previous device handle before resetting state
         if self._device is not None:
             try:
@@ -380,8 +389,10 @@ class EscposDriver(AbstractDriver):
         # Signal queue thread to stop and wait for it
         self._print_queue.put(None)
         self._queue_thread.join(timeout=10)
+        if self._queue_thread.is_alive():
+            logger.warning("escpos: print queue thread did not exit within 10 s")
 
-        if self._device is not None:
+        if self._device is not None and _USB_AVAILABLE:
             try:
                 usb.util.dispose_resources(self._device)
             except Exception:

@@ -16,7 +16,7 @@
 
   <a href="{{ url_for('views.status') }}" class="quick-card">
     <div class="card">
-      <div class="quick-icon">🖨</div>
+      <div class="quick-icon" aria-label="{{ _('Printer') }}">🖨</div>
       <div class="quick-label">{{ _('Driver Status') }}</div>
       <div class="quick-desc">{{ _('Printers, scales, displays') }}</div>
     </div>
@@ -24,7 +24,7 @@
 
   <a href="{{ url_for('views.system') }}" class="quick-card">
     <div class="card">
-      <div class="quick-icon">⚙</div>
+      <div class="quick-icon" aria-label="{{ _('Settings') }}">⚙</div>
       <div class="quick-label">{{ _('System Info') }}</div>
       <div class="quick-desc">{{ _('Hostname, platform, temperature') }}</div>
     </div>
@@ -32,7 +32,7 @@
 
   <a href="{{ url_for('views.usb_devices') }}" class="quick-card">
     <div class="card">
-      <div class="quick-icon">🔌</div>
+      <div class="quick-icon" aria-label="{{ _('USB') }}">🔌</div>
       <div class="quick-label">{{ _('USB Devices') }}</div>
       <div class="quick-desc">{{ _('Connected USB hardware') }}</div>
     </div>
