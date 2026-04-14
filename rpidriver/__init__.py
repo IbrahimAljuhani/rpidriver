@@ -10,10 +10,6 @@ import os
 import secrets
 from configparser import ConfigParser
 
-from flask import Flask, request, session
-from flask_babel import Babel, gettext
-from flask_cors import CORS
-
 logger = logging.getLogger(__name__)
 
 # Drivers registry: plugin_name → driver instance
@@ -38,6 +34,7 @@ def get_config(app=None):
 
 def get_locale():
     """Return the active locale (stored in session, falls back to browser negotiation)."""
+    from flask import request, session  # noqa: PLC0415 — lazy import avoids circular dep at build time
     if "lang" in session:
         return session["lang"]
     return request.accept_languages.best_match(["ar", "en"], default="en")
@@ -45,6 +42,10 @@ def get_locale():
 
 def create_app(config_path=None):
     """Application factory."""
+    from flask import Flask  # noqa: PLC0415
+    from flask_babel import Babel, gettext  # noqa: PLC0415
+    from flask_cors import CORS  # noqa: PLC0415
+
     app = Flask(__name__, instance_relative_config=False)
     _secret = os.environ.get("RPIDRIVER_SECRET")
     if not _secret:
