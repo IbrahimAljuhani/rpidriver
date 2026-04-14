@@ -48,8 +48,13 @@ def _config_path() -> str:
 
 
 def _read_cfg() -> ConfigParser:
+    from configparser import Error as _CfgError
     cfg = ConfigParser()
-    cfg.read(_config_path())
+    try:
+        cfg.read(_config_path())
+    except _CfgError as exc:
+        logger.error("Config file is malformed: %s", exc)
+        # Return an empty config — the caller will fall back to schema defaults
     return cfg
 
 
@@ -149,19 +154,24 @@ def config_save():
                                     "error": f"[{section}] {key}: invalid option '{str_val}'"}), 400
             elif field_type in ("text", "password"):
                 maxlen = schema_field.get("maxlength")
-                if maxlen and len(str_val) > int(maxlen):
+                if maxlen and len(str_val.encode("utf-8")) > int(maxlen):
                     return jsonify({"success": False,
                                     "error": f"[{section}] {key}: exceeds max length of {maxlen}"}), 400
 
             # ── Detect restart-required changes ───────────────────────────────
             # Compare against the effective current value (schema default when
             # the key is absent) to avoid false positives on the first save.
-            if schema_field.get("restart"):
-                default_str = str(schema_field.get("default", ""))
-                effective   = cfg.get(section, key, fallback=default_str).strip()
-                if effective != str_val:
-                    restart_required = True
+            default_str = str(schema_field.get("default", ""))
+            effective   = cfg.get(section, key, fallback=default_str).strip()
+            if schema_field.get("restart") and effective != str_val:
+                restart_required = True
 
+            if effective != str_val and schema_field.get("type") not in ("password",):
+                logger.info(
+                    "CONFIG AUDIT [%s] %s: %r → %r (by %s)",
+                    section, key, effective, str_val,
+                    request.remote_addr,
+                )
             cfg.set(section, key, str_val)
 
     # ── Atomic write: temp file → os.replace() ───────────────────────────────
@@ -278,6 +288,35 @@ def neoleap_ping():
         return jsonify({"reachable": True, "ip": ip, "port": port})
     except OSError as exc:
         return jsonify({"reachable": False, "ip": ip, "port": port, "error": str(exc)})
+
+
+# ── Health check (unauthenticated) ────────────────────────────────────────────
+
+@bp.route("/health", methods=["GET"])
+def health():
+    """
+    GET /api/health
+    Returns overall status and per-driver status.
+    Unauthenticated — safe to call from monitoring tools and Odoo.
+    """
+    from rpidriver import get_drivers
+    drivers = get_drivers()
+    statuses = {}
+    for name, drv in drivers.items():
+        try:
+            statuses[name] = drv.get_status()
+        except Exception as exc:
+            statuses[name] = {"status": "error", "messages": [str(exc)]}
+
+    # Overall status: ok if all loaded drivers are connected, degraded otherwise
+    if not statuses:
+        overall = "ok"   # No drivers configured yet
+    elif all(s.get("status") == "connected" for s in statuses.values()):
+        overall = "ok"
+    else:
+        overall = "degraded"
+
+    return jsonify({"status": overall, "drivers": statuses})
 
 
 # ── Log endpoints ─────────────────────────────────────────────────────────────
@@ -474,6 +513,16 @@ def cups_printers_add():
                         "error": "Name may only contain letters, digits, -, _ and ."}), 400
     if not uri:
         return jsonify({"success": False, "error": "Device URI is required"}), 400
+
+    # Whitelist URI schemes accepted by lpadmin
+    _ALLOWED_URI_SCHEMES = {"socket", "usb", "ipp", "ipps", "lpd", "dnssd"}
+    _uri_scheme = uri.split("://")[0].lower() if "://" in uri else ""
+    if _uri_scheme not in _ALLOWED_URI_SCHEMES:
+        return jsonify({
+            "success": False,
+            "error"  : f"Unsupported URI scheme '{_uri_scheme}'. "
+                       f"Allowed: {', '.join(sorted(_ALLOWED_URI_SCHEMES))}",
+        }), 400
 
     cmd = ["sudo", "lpadmin", "-p", name, "-v", uri, "-m", "raw", "-E"]
     if description:

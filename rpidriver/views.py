@@ -197,6 +197,15 @@ def ssl_generate():
     except OSError as exc:
         return jsonify({"success": False, "error": f"Cannot create SSL dir: {exc}"}), 500
 
+    # Validate pi_ip is a real IPv4 address before embedding in openssl -addext.
+    # Prevents unexpected behaviour if the routing table returns a malformed string.
+    import ipaddress as _ipaddress
+    try:
+        _ipaddress.ip_address(pi_ip)
+    except ValueError:
+        pi_ip = "127.0.0.1"
+        logger.warning("ssl_generate: could not detect a valid local IP — using 127.0.0.1")
+
     san = f"subjectAltName=IP:{pi_ip},IP:127.0.0.1,DNS:rpidriver.local"
 
     try:

@@ -158,6 +158,22 @@ class EscposDriver(AbstractDriver):
         # 42 chars for 80mm paper, 32 for 58mm
         self._cols = 42 if self._paper_width >= 576 else 32
 
+        # ── Optional USB vendor/product override ──────────────────────────
+        # When set, only a printer with this exact vendor:product is used.
+        # Leave empty to auto-detect from KNOWN_PRINTERS (default).
+        _raw_vendor  = str((config or {}).get("usb_vendor",  "")).strip().lower()
+        _raw_product = str((config or {}).get("usb_product", "")).strip().lower()
+        try:
+            self._usb_vendor  = int(_raw_vendor,  16) if _raw_vendor  else None
+        except ValueError:
+            logger.warning("EscposDriver: invalid usb_vendor %r — ignored.", _raw_vendor)
+            self._usb_vendor = None
+        try:
+            self._usb_product = int(_raw_product, 16) if _raw_product else None
+        except ValueError:
+            logger.warning("EscposDriver: invalid usb_product %r — ignored.", _raw_product)
+            self._usb_product = None
+
         # ── Print queue: serialises concurrent print requests ─────────────
         # Odoo POS may fire multiple print requests simultaneously (e.g. receipt
         # + cashbox pulse).  The queue ensures USB writes never overlap, which
@@ -199,14 +215,37 @@ class EscposDriver(AbstractDriver):
         self._device = None
         self._endpoint_out = None
 
-        for spec in KNOWN_PRINTERS:
-            kwargs = {"idVendor": spec["vendor"]}
-            if spec["product"] is not None:
-                kwargs["idProduct"] = spec["product"]
+        # If the operator pinned a specific vendor:product, try that first.
+        if self._usb_vendor is not None:
+            kwargs = {"idVendor": self._usb_vendor}
+            if self._usb_product is not None:
+                kwargs["idProduct"] = self._usb_product
             dev = usb.core.find(**kwargs)
             if dev is not None:
                 self._device = dev
-                break
+                logger.info(
+                    "EscposDriver: using pinned USB device %04x:%s",
+                    self._usb_vendor,
+                    f"{self._usb_product:04x}" if self._usb_product else "*",
+                )
+            else:
+                logger.warning(
+                    "EscposDriver: pinned USB device %04x:%s not found — "
+                    "falling back to auto-detect.",
+                    self._usb_vendor,
+                    f"{self._usb_product:04x}" if self._usb_product else "*",
+                )
+
+        # Auto-detect from KNOWN_PRINTERS if no device found yet
+        if self._device is None:
+            for spec in KNOWN_PRINTERS:
+                kwargs = {"idVendor": spec["vendor"]}
+                if spec["product"] is not None:
+                    kwargs["idProduct"] = spec["product"]
+                dev = usb.core.find(**kwargs)
+                if dev is not None:
+                    self._device = dev
+                    break
 
         if self._device is None:
             self.set_status("disconnected", "No ESC/POS printer found on USB")
@@ -390,7 +429,11 @@ class EscposDriver(AbstractDriver):
         self._print_queue.put(None)
         self._queue_thread.join(timeout=10)
         if self._queue_thread.is_alive():
-            logger.warning("escpos: print queue thread did not exit within 10 s")
+            logger.warning(
+                "EscposDriver: print queue thread did not exit within 10 s — "
+                "remaining jobs may be lost. The thread is daemon=True and will "
+                "be killed when the process exits."
+            )
 
         if self._device is not None and _USB_AVAILABLE:
             try:

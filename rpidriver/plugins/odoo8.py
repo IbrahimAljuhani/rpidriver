@@ -265,37 +265,12 @@ def serial_read():
     """
     POST /hw_proxy/serial_read  (JSON-RPC)
     Read data from a generic serial device managed by serial_driver.
-
-    Expected params:
-        device   — serial port path (e.g. "/dev/ttyUSB1")
-        size     — number of bytes to read (default: 64)
-        timeout  — read timeout in seconds (default: 1)
-
-    Returns {"data": "<hex-encoded bytes>", "status": "ok"}
+    serial_driver is not yet implemented — endpoint is reserved for future use.
     """
-    data = request.get_json(force=True, silent=True) or {}
+    data   = request.get_json(force=True, silent=True) or {}
     req_id = data.get("id")
-    params = data.get("params") or {}
-
-    drivers = _get_drivers()
-    serial_drv = drivers.get("serial_driver")
-
-    # Fallback: open the port directly if serial_driver is not loaded
-    device = params.get("device", "")
-    size = int(params.get("size", 64))
-    timeout = float(params.get("timeout", 1.0))
-
-    if serial_drv is not None:
-        try:
-            raw = serial_drv.read(size=size, timeout=timeout)
-            return _jsonrpc_result({"data": raw.hex(), "status": "ok"}, req_id)
-        except Exception as exc:
-            logger.exception("serial_read via serial_driver failed: %s", exc)
-            return _jsonrpc_error(str(exc), req_id=req_id)
-
-    # No serial_driver loaded — reject.
     return _jsonrpc_error(
-        "serial_driver is not implemented in this release. "
+        "serial_driver is not available in this release. "
         "Use scale_driver for serial scales.",
         req_id=req_id,
     )
@@ -306,45 +281,12 @@ def serial_write():
     """
     POST /hw_proxy/serial_write  (JSON-RPC)
     Write data to a generic serial device managed by serial_driver.
-
-    Expected params:
-        device   — serial port path (e.g. "/dev/ttyUSB1")
-        data     — hex-encoded bytes to send (e.g. "57" for Toledo 'W' command)
-        timeout  — write timeout in seconds (default: 1)
-
-    Returns {"bytes_written": N, "status": "ok"}
+    serial_driver is not yet implemented — endpoint is reserved for future use.
     """
-    data = request.get_json(force=True, silent=True) or {}
+    data   = request.get_json(force=True, silent=True) or {}
     req_id = data.get("id")
-    params = data.get("params") or {}
-
-    drivers = _get_drivers()
-    serial_drv = drivers.get("serial_driver")
-
-    device = params.get("device", "")
-    hex_data = params.get("data", "")
-    timeout = float(params.get("timeout", 1.0))
-
-    try:
-        raw_bytes = bytes.fromhex(hex_data) if hex_data else b""
-    except ValueError:
-        return _jsonrpc_error(
-            f"Invalid hex string: {hex_data!r}. "
-            "Expected hex-encoded bytes, e.g. '57' for ASCII 'W'.",
-            req_id=req_id,
-        )
-
-    if serial_drv is not None:
-        try:
-            n = serial_drv.write(raw_bytes)
-            return _jsonrpc_result({"bytes_written": n, "status": "ok"}, req_id)
-        except Exception as exc:
-            logger.exception("serial_write via serial_driver failed: %s", exc)
-            return _jsonrpc_error(str(exc), req_id=req_id)
-
-    # No serial_driver loaded — reject.
     return _jsonrpc_error(
-        "serial_driver is not implemented in this release. "
+        "serial_driver is not available in this release. "
         "Use scale_driver for serial scales.",
         req_id=req_id,
     )

@@ -171,6 +171,11 @@ let _ptype    = 'network';
 // ── Init ─────────────────────────────────────────────────────────────────────
 loadPrinters();
 
+// Auto-refresh printer list every 10 s (status may change if CUPS is modified externally)
+setInterval(() => {
+  if (!_addOpen) loadPrinters();   // skip refresh while the add form is open
+}, 10000);
+
 // ── Toggle add form ───────────────────────────────────────────────────────────
 function toggleAddForm() {
   _addOpen = !_addOpen;

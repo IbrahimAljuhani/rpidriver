@@ -39,6 +39,12 @@ class DisplayDriver(AbstractDriver):
         super().__init__(config)
         cfg = config or {}
         self._port = cfg.get("port", "/dev/ttyACM0")
+        if not self._port.startswith("/dev/"):
+            logger.warning(
+                "DisplayDriver: invalid port %r — must start with /dev/. Defaulting to /dev/ttyACM0.",
+                self._port,
+            )
+            self._port = "/dev/ttyACM0"
         self._baudrate = int(cfg.get("baudrate", 9600))
         self._serial: serial.Serial | None = None
         self._lock = threading.Lock()

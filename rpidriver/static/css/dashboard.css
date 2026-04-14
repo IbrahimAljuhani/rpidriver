@@ -499,3 +499,34 @@ footer a { color: var(--primary); text-decoration: none; }
     animation-iteration-count: 1 !important;
   }
 }
+
+/* ── RTL layout fixes ── */
+[dir="rtl"] .field-label {
+  text-align: right;
+}
+[dir="rtl"] .field-input,
+[dir="rtl"] .field-control,
+[dir="rtl"] .field-help,
+[dir="rtl"] .hint {
+  text-align: right;
+  direction: rtl;
+}
+[dir="rtl"] .driver-grid {
+  justify-content: flex-end;
+}
+[dir="rtl"] .status-header,
+[dir="rtl"] .driver-card-header,
+[dir="rtl"] .printers-header {
+  flex-direction: row-reverse;
+}
+[dir="rtl"] .printer-actions {
+  flex-direction: row-reverse;
+}
+[dir="rtl"] nav ul {
+  flex-direction: row-reverse;
+}
+[dir="rtl"] .notice-warn,
+[dir="rtl"] .notice-info,
+[dir="rtl"] .notice-danger {
+  text-align: right;
+}

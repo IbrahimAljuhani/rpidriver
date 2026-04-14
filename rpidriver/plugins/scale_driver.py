@@ -171,6 +171,15 @@ class ScaleDriver(ThreadDriver):
         super().__init__(config)
         cfg = config or {}
         self._port = cfg.get("port", "/dev/ttyUSB0")
+        # Reject paths that don't point at a real device node — prevents
+        # accidental reads from arbitrary files (e.g. /etc/passwd).
+        if not self._port.startswith("/dev/"):
+            logger.warning(
+                "ScaleDriver: invalid port %r — must start with /dev/. "
+                "Defaulting to /dev/ttyUSB0.",
+                self._port,
+            )
+            self._port = "/dev/ttyUSB0"
         self._protocol = cfg.get("protocol", "toledo8217")
         self._timeout = float(cfg.get("timeout", 1.0))
         self._serial: serial.Serial | None = None

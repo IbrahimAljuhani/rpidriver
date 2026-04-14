@@ -186,6 +186,9 @@ class CupsDriver(AbstractDriver):
             conn = _cups_lib.Connection(
                 host=self._cups_host, port=self._cups_port
             )
+            # Note: pycups Connection is a lightweight config object; each call
+            # establishes its own underlying socket, so creating one per job is
+            # intentional — it avoids stale connection state after long idle periods.
             job_id = conn.printFile(
                 self._printer_name,
                 tmp_path,

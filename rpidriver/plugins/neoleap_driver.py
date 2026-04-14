@@ -128,7 +128,7 @@ class NeoLeapDriver(PaymentTerminalDriver):
         self._neoleap_ip  = cfg.get("neoleap_ip",  "").strip()
         self._terminal_id = cfg.get("terminal_id", "").strip()
         self._port        = int(cfg.get("port",    9998))
-        self._timeout     = int(cfg.get("timeout", 90))
+        self._timeout     = max(5, min(600, int(cfg.get("timeout", 90))))
 
         # Seconds before an uncollected final state is auto-reset to "idle".
         # Configurable via state_ttl in [neoleap_driver] config section.
@@ -339,8 +339,13 @@ class NeoLeapDriver(PaymentTerminalDriver):
             try:
                 url = f"ws://{neoleap_ip}:{self._port}"
                 ws  = websocket.create_connection(url, timeout=10)
-                ws.send(json.dumps({"Command": "CANCEL"}))
-                ws.close()
+                try:
+                    ws.send(json.dumps({"Command": "CANCEL"}))
+                finally:
+                    try:
+                        ws.close()
+                    except Exception:
+                        pass
                 logger.info("NeoLeapDriver: CANCEL sent to %s", url)
             except Exception as exc:
                 logger.warning("NeoLeapDriver: cancel command failed: %s", exc)
@@ -392,7 +397,12 @@ class NeoLeapDriver(PaymentTerminalDriver):
             if '"TERMINAL_RESPONSE"' in message and '<madaTransactionResult>' in message:
                 logger.info("NeoLeapDriver: received XML response (Format B — N950 production)")
                 final = self._parse_xml_response(message)
-                ws.close(); event.set()
+                try:
+                    ws.close()
+                except Exception:
+                    pass
+                finally:
+                    event.set()
                 return
 
             # ── Format A — proper JSON ────────────────────────────────────────
@@ -402,7 +412,13 @@ class NeoLeapDriver(PaymentTerminalDriver):
                 logger.error("NeoLeapDriver: unrecognised message format: %s", exc)
                 logger.debug("NeoLeapDriver: raw message was: %s", message[:500])
                 final = _err(f"Unrecognised terminal response: {exc}")
-                ws.close(); event.set(); return
+                try:
+                    ws.close()
+                except Exception:
+                    pass
+                finally:
+                    event.set()
+                return
 
             event_name = data.get("EventName", "")
 
@@ -423,11 +439,21 @@ class NeoLeapDriver(PaymentTerminalDriver):
                     ws.send(json.dumps(cmd))
                 else:
                     final = _err(f"Terminal not ready (status: {terminal_status}). Please try again.")
-                    ws.close(); event.set()
+                    try:
+                        ws.close()
+                    except Exception:
+                        pass
+                    finally:
+                        event.set()
 
             elif event_name == "TERMINAL_RESPONSE":
                 final = self._parse_json_response(data)
-                ws.close(); event.set()
+                try:
+                    ws.close()
+                except Exception:
+                    pass
+                finally:
+                    event.set()
 
             else:
                 logger.debug("NeoLeapDriver: ignored event %r", event_name)

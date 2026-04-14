@@ -100,7 +100,12 @@
         </span>
         <button class="btn-secondary"
                 style="padding:0.3rem 0.75rem; font-size:0.82rem;"
-                onclick="testDriver('{{ name }}', this)">
+                {% if info.get('status') in ['connected', 'error'] %}
+                onclick="testDriver('{{ name }}', this)"
+                {% else %}
+                onclick="testDriver('{{ name }}', this)"
+                title="{{ _('Driver is not connected — test may fail') }}"
+                {% endif %}>
           {{ _('Test') }}
         </button>
       </div>
