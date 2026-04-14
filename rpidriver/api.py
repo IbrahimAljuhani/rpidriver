@@ -238,6 +238,47 @@ def service_restart():
         })
 
 
+# ── NeoLeap ping (unauthenticated — reachability only, no secrets) ────────────
+
+@bp.route("/neoleap/ping", methods=["GET"])
+def neoleap_ping():
+    """
+    GET /api/neoleap/ping
+
+    Test TCP connectivity from the Pi to the configured NeoLeap terminal.
+    Deliberately unauthenticated — returns only reachability info (no sensitive config).
+    Called by the Odoo payment method 'Test Connection' button so the test runs
+    from the Pi (the actual communication path) rather than from the Odoo server.
+    """
+    import socket as _sock
+    from rpidriver import get_drivers
+
+    drv = get_drivers().get("neoleap_driver")
+    if drv is None:
+        return jsonify({
+            "reachable": False,
+            "error"    : "neoleap_driver is not loaded — enable it in RPiDriver config",
+        })
+
+    ip   = getattr(drv, "_neoleap_ip", "")
+    port = getattr(drv, "_port", 9998)
+
+    if not ip:
+        return jsonify({
+            "reachable": False, "ip": ip, "port": port,
+            "error"    : "neoleap_ip is not configured in RPiDriver",
+        })
+
+    try:
+        s = _sock.socket(_sock.AF_INET, _sock.SOCK_STREAM)
+        s.settimeout(5)
+        s.connect((ip, port))
+        s.close()
+        return jsonify({"reachable": True, "ip": ip, "port": port})
+    except OSError as exc:
+        return jsonify({"reachable": False, "ip": ip, "port": port, "error": str(exc)})
+
+
 # ── Log endpoints ─────────────────────────────────────────────────────────────
 
 @bp.route("/logs")

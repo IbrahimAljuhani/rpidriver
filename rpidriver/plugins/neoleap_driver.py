@@ -157,9 +157,11 @@ class NeoLeapDriver(PaymentTerminalDriver):
                     f"neoleap_ip {self._neoleap_ip!r} is not a valid IP address"
                 )
 
-        if not self._terminal_id:
-            errors.append("terminal_id is required")
-        elif not self._terminal_id.isdigit() or len(self._terminal_id) not in (8, 16):
+        # terminal_id is optional — the terminal knows its own ID and does not
+        # require it in the SALE command.  We only validate the format if provided.
+        if self._terminal_id and (
+            not self._terminal_id.isdigit() or len(self._terminal_id) not in (8, 16)
+        ):
             errors.append(
                 f"terminal_id {self._terminal_id!r} must be 8 digits (bank TID) "
                 f"or 16 digits (device TID shown on terminal screen)"
