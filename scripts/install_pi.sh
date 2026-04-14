@@ -57,6 +57,12 @@ if getent group systemd-journal &>/dev/null; then
     info "Added $RUN_USER to systemd-journal group (live log streaming)."
 fi
 
+# Add to lpadmin group so the dashboard can manage CUPS printers
+if getent group lpadmin &>/dev/null; then
+    usermod -aG lpadmin "$RUN_USER"
+    info "Added $RUN_USER to lpadmin group (CUPS printer management)."
+fi
+
 # ── Clone / update source ──────────────────────────────────────────────────
 # Full clone (not --depth=1) so that `update.sh` can git pull cleanly
 if [[ -d "$INSTALL_DIR/.git" ]]; then
@@ -185,6 +191,8 @@ info "Installing sudoers entry for passwordless service restart..."
 cat > "$SUDOERS_FILE" << 'SUDOERS_EOF'
 # Allow the rpidriver service user to restart itself via the dashboard
 rpidriver ALL=(ALL) NOPASSWD: /bin/systemctl restart rpidriver
+# Allow CUPS printer management (add / delete printers) via the dashboard
+rpidriver ALL=(ALL) NOPASSWD: /usr/sbin/lpadmin
 SUDOERS_EOF
 chmod 440 "$SUDOERS_FILE"
 # Validate the file — remove it if visudo finds a syntax error

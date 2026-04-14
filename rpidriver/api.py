@@ -13,6 +13,7 @@ GET  /api/logs/stream         Server-Sent Events: live log tail
 import functools
 import logging
 import os
+import re
 import subprocess
 import tempfile
 from configparser import ConfigParser
@@ -370,3 +371,239 @@ def logs_stream():
             "Connection"       : "keep-alive",
         },
     )
+
+
+# ── CUPS printer management ───────────────────────────────────────────────────
+#
+# All lpadmin write commands are invoked via sudo.
+# The sudoers entry (installed by install_pi.sh) grants:
+#   rpidriver ALL=(ALL) NOPASSWD: /usr/sbin/lpadmin
+# lpstat / lpinfo / lp are read/print commands that the lp group can run
+# without sudo — no privilege escalation needed for those.
+
+_SAFE_NAME_RE = re.compile(r'^[a-zA-Z0-9_.\-]+$')
+
+
+def _cups_run(cmd, **kwargs):
+    """Run a shell command; return (returncode, stdout, stderr)."""
+    try:
+        r = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=10, **kwargs
+        )
+        return r.returncode, r.stdout.strip(), r.stderr.strip()
+    except FileNotFoundError:
+        return -1, "", f"{cmd[0]}: command not found — is CUPS installed?"
+    except subprocess.TimeoutExpired:
+        return -1, "", "Command timed out"
+
+
+def _cups_list_printers():
+    """Return a list of dicts describing all CUPS printers."""
+    printers = {}
+
+    # ── Status ── lpstat -p ──────────────────────────────────────────────────
+    _, out, _ = _cups_run(["lpstat", "-p"])
+    for line in out.splitlines():
+        if not line.startswith("printer "):
+            continue
+        parts = line.split()
+        if len(parts) < 2:
+            continue
+        name = parts[1]
+        online = "idle" in line or "processing" in line
+        printers[name] = {
+            "name"       : name,
+            "status"     : "connected" if online else "disconnected",
+            "uri"        : "",
+            "description": "",
+            "location"   : "",
+        }
+
+    # ── URIs ── lpstat -v ────────────────────────────────────────────────────
+    _, out2, _ = _cups_run(["lpstat", "-v"])
+    for line in out2.splitlines():
+        # "device for NAME: socket://192.168.1.101:9100"
+        if not line.startswith("device for "):
+            continue
+        rest = line[len("device for "):]
+        name, sep, uri = rest.partition(": ")
+        if sep and name.strip() in printers:
+            printers[name.strip()]["uri"] = uri.strip()
+
+    # ── Descriptions ── lpoptions -p NAME ───────────────────────────────────
+    # lpoptions -p <name> returns space-separated key=value tokens
+    for name in list(printers):
+        _, out3, _ = _cups_run(["lpoptions", "-p", name])
+        for token in out3.split():
+            if "=" not in token:
+                continue
+            k, _, v = token.partition("=")
+            v = v.strip("'\"")
+            if k == "printer-info":
+                printers[name]["description"] = v
+            elif k == "printer-location":
+                printers[name]["location"] = v
+
+    return list(printers.values())
+
+
+@bp.route("/cups/printers", methods=["GET"])
+@_require_auth
+def cups_printers_list():
+    """GET /api/cups/printers — list all CUPS printers."""
+    return jsonify({"printers": _cups_list_printers()})
+
+
+@bp.route("/cups/printers", methods=["POST"])
+@_require_auth
+def cups_printers_add():
+    """
+    POST /api/cups/printers
+    Body: { name, uri, description?, location? }
+    """
+    data        = request.get_json(force=True, silent=True) or {}
+    name        = data.get("name", "").strip()
+    uri         = data.get("uri",  "").strip()
+    description = data.get("description", "").strip()
+    location    = data.get("location",    "").strip()
+
+    if not name:
+        return jsonify({"success": False, "error": "Printer name is required"}), 400
+    if not _SAFE_NAME_RE.match(name):
+        return jsonify({"success": False,
+                        "error": "Name may only contain letters, digits, -, _ and ."}), 400
+    if not uri:
+        return jsonify({"success": False, "error": "Device URI is required"}), 400
+
+    cmd = ["sudo", "lpadmin", "-p", name, "-v", uri, "-m", "raw", "-E"]
+    if description:
+        cmd += ["-D", description]
+    if location:
+        cmd += ["-L", location]
+
+    rc, _, err = _cups_run(cmd)
+    if rc != 0:
+        logger.error("cups_printers_add lpadmin failed: %s", err)
+        return jsonify({"success": False, "error": err or "lpadmin failed"}), 500
+    return jsonify({"success": True})
+
+
+@bp.route("/cups/printers/<name>", methods=["DELETE"])
+@_require_auth
+def cups_printers_delete(name):
+    """DELETE /api/cups/printers/<name> — remove a printer from CUPS."""
+    if not _SAFE_NAME_RE.match(name):
+        return jsonify({"success": False, "error": "Invalid printer name"}), 400
+    rc, _, err = _cups_run(["sudo", "lpadmin", "-x", name])
+    if rc != 0:
+        return jsonify({"success": False, "error": err or "lpadmin -x failed"}), 500
+    return jsonify({"success": True})
+
+
+@bp.route("/cups/printers/<name>/test", methods=["POST"])
+@_require_auth
+def cups_printers_test(name):
+    """POST /api/cups/printers/<name>/test — send a test print job."""
+    if not _SAFE_NAME_RE.match(name):
+        return jsonify({"success": False, "error": "Invalid printer name"}), 400
+
+    test_text = (
+        "\n"
+        "================================\n"
+        "   RPiDriver — Test Print\n"
+        "================================\n"
+        f"   Printer  : {name}\n"
+        "================================\n"
+        "\n\n\n"
+    )
+    rc, out, err = _cups_run(["lp", "-d", name], input=test_text)
+    if rc != 0:
+        return jsonify({"success": False, "error": err or "lp command failed"}), 500
+    return jsonify({"success": True, "message": out or "Test job submitted"})
+
+
+@bp.route("/cups/devices", methods=["GET"])
+@_require_auth
+def cups_devices():
+    """GET /api/cups/devices — list available printer devices (USB + network)."""
+    _, out, _ = _cups_run(["lpinfo", "-v"])
+    devices = []
+    for line in out.splitlines():
+        parts = line.split(" ", 1)
+        if len(parts) != 2:
+            continue
+        dtype, uri = parts
+        # Only include actionable device types
+        if any(uri.startswith(p) for p in
+               ("socket://", "usb://", "ipp://", "ipps://", "lpd://")):
+            devices.append({"type": dtype.strip(), "uri": uri.strip()})
+    return jsonify({"devices": devices})
+
+
+# ── Driver test ───────────────────────────────────────────────────────────────
+
+@bp.route("/drivers/<name>/test", methods=["POST"])
+@_require_auth
+def driver_test(name):
+    """
+    POST /api/drivers/<name>/test
+    Run a quick self-test on the named driver.
+    Returns { success, message } or { success, error }.
+    """
+    if not _SAFE_NAME_RE.match(name):
+        return jsonify({"success": False, "error": "Invalid driver name"}), 400
+
+    from rpidriver import get_drivers
+    drivers = get_drivers()
+    drv = drivers.get(name)
+    if drv is None:
+        return jsonify({"success": False,
+                        "error": f"Driver '{name}' is not loaded"}), 404
+
+    try:
+        # ── ESC/POS USB printer ──────────────────────────────────────────────
+        if name == "escpos_driver":
+            drv.print_text("RPiDriver Test Print\n\n\n")
+            return jsonify({"success": True,
+                            "message": "Test print sent to USB printer"})
+
+        # ── CUPS network printer ─────────────────────────────────────────────
+        elif name == "cups_driver":
+            drv.print_text("RPiDriver Test Print\n\n\n")
+            return jsonify({"success": True,
+                            "message": "Test print sent via CUPS"})
+
+        # ── NeoLeap payment terminal ─────────────────────────────────────────
+        elif name == "neoleap_driver":
+            import socket as _sock
+            ip   = getattr(drv, "_neoleap_ip", "")
+            port = getattr(drv, "_port", 9998)
+            if not ip:
+                return jsonify({"success": False,
+                                "error": "NeoLeap IP is not configured"})
+            s = _sock.socket(_sock.AF_INET, _sock.SOCK_STREAM)
+            s.settimeout(5)
+            s.connect((ip, port))
+            s.close()
+            return jsonify({"success": True,
+                            "message": f"TCP connection OK → {ip}:{port}"})
+
+        # ── Serial scale ─────────────────────────────────────────────────────
+        elif name == "scale_driver":
+            weight = drv.read_weight()
+            return jsonify({"success": True,
+                            "message": f"Weight reading: {weight}"})
+
+        # ── Customer display ─────────────────────────────────────────────────
+        elif name == "display_driver":
+            drv.display_text(line1="RPiDriver", line2="Test OK")
+            return jsonify({"success": True,
+                            "message": "Test message sent to display"})
+
+        else:
+            return jsonify({"success": False,
+                            "error": f"No test defined for driver '{name}'"}), 400
+
+    except Exception as exc:
+        logger.exception("driver_test '%s' failed: %s", name, exc)
+        return jsonify({"success": False, "error": str(exc)})

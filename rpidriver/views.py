@@ -318,6 +318,12 @@ def usb_devices():
     return render_template("usb_devices.html", devices=devices)
 
 
+@bp.route("/printers")
+@require_auth
+def printers():
+    return render_template("printers.html")
+
+
 @bp.route("/lang/<locale>")
 def set_language(locale):
     if locale in ("ar", "en"):

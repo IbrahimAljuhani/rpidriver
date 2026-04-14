@@ -2,6 +2,25 @@
 {% block title %}RPiDriver — {{ _('Status') }}{% endblock %}
 
 {% block head %}
+<style>
+.driver-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+.test-result {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+  display: none;
+}
+.test-result.ok  { background: rgba(74,222,128,0.12); color: var(--success); }
+.test-result.err { background: rgba(248,113,113,0.12); color: var(--danger); }
+</style>
 <script>
   let _stale = false;
 
@@ -32,6 +51,31 @@
       .finally(() => setTimeout(refreshStatus, 5000));
   }
   setTimeout(refreshStatus, 5000);
+
+  async function testDriver(name, btn) {
+    const resultEl = document.getElementById('test-result-' + name);
+    btn.disabled = true;
+    btn.textContent = '{{ _("Testing…") }}';
+    if (resultEl) resultEl.style.display = 'none';
+    try {
+      const r = await fetch('/api/drivers/' + encodeURIComponent(name) + '/test', {method: 'POST'});
+      const d = await r.json();
+      if (resultEl) {
+        resultEl.textContent = d.success ? (d.message || '{{ _("Test passed") }}') : (d.error || '{{ _("Test failed") }}');
+        resultEl.className   = 'test-result ' + (d.success ? 'ok' : 'err');
+        resultEl.style.display = '';
+      }
+    } catch {
+      if (resultEl) {
+        resultEl.textContent = '{{ _("Network error") }}';
+        resultEl.className   = 'test-result err';
+        resultEl.style.display = '';
+      }
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '{{ _("Test") }}';
+    }
+  }
 </script>
 {% endblock %}
 
@@ -47,12 +91,19 @@
 {% if statuses %}
   {% for name, info in statuses.items() %}
   <div class="card">
-    <h2>{{ name }}</h2>
-    <div style="margin-bottom:0.5rem;">
-      {% set s = info.get('status', 'unknown') %}
-      <span class="badge badge-{{ s if s in ['connected','error','disconnected'] else 'disconnected' }}">
-        {{ _(s | capitalize) }}
-      </span>
+    <div class="driver-card-header">
+      <h2 style="margin:0;">{{ name }}</h2>
+      <div style="display:flex; align-items:center; gap:0.5rem;">
+        {% set s = info.get('status', 'unknown') %}
+        <span class="badge badge-{{ s if s in ['connected','error','disconnected'] else 'disconnected' }}">
+          {{ _(s | capitalize) }}
+        </span>
+        <button class="btn-secondary"
+                style="padding:0.3rem 0.75rem; font-size:0.82rem;"
+                onclick="testDriver('{{ name }}', this)">
+          {{ _('Test') }}
+        </button>
+      </div>
     </div>
     {% if info.get('messages') %}
     <ul class="driver-messages">
@@ -61,6 +112,7 @@
       {% endfor %}
     </ul>
     {% endif %}
+    <div id="test-result-{{ name }}" class="test-result"></div>
   </div>
   {% endfor %}
 {% else %}

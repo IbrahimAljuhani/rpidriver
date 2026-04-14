@@ -24,6 +24,7 @@
     <li><a href="{{ url_for('views.config') }}"      {% if ep == 'views.config'      %}class="active" aria-current="page"{% endif %}>{{ _('Config') }}</a></li>
     <li><a href="{{ url_for('views.logs') }}"        {% if ep == 'views.logs'        %}class="active" aria-current="page"{% endif %}>{{ _('Logs') }}</a></li>
     <li><a href="{{ url_for('views.system') }}"      {% if ep == 'views.system'      %}class="active" aria-current="page"{% endif %}>{{ _('System') }}</a></li>
+    <li><a href="{{ url_for('views.printers') }}"   {% if ep == 'views.printers'    %}class="active" aria-current="page"{% endif %}>{{ _('Printers') }}</a></li>
     <li><a href="{{ url_for('views.usb_devices') }}" {% if ep == 'views.usb_devices' %}class="active" aria-current="page"{% endif %}>{{ _('USB') }}</a></li>
   </ul>
   <div class="nav-actions">

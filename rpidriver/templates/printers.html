@@ -1,0 +1,411 @@
+{% extends "layout.html" %}
+{% block title %}RPiDriver — {{ _('Printers') }}{% endblock %}
+
+{% block head %}
+<style>
+.printers-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+.printer-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.printer-info { flex: 1; min-width: 0; }
+.printer-name { font-weight: 600; font-size: 1rem; margin-bottom: 0.25rem; }
+.printer-uri  { font-size: 0.82rem; color: var(--muted); font-family: monospace; word-break: break-all; }
+.printer-meta { font-size: 0.82rem; color: var(--muted); margin-top: 0.2rem; }
+.printer-actions { display: flex; gap: 0.5rem; align-items: center; flex-shrink: 0; }
+
+/* Add-printer form */
+#add-form-wrap { display: none; }
+#add-form-wrap.open { display: block; }
+.add-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem 1rem;
+}
+@media (max-width: 600px) { .add-form-grid { grid-template-columns: 1fr; } }
+.type-toggle { display: flex; gap: 1rem; margin-bottom: 0.75rem; }
+.type-toggle label { display: flex; align-items: center; gap: 0.35rem; cursor: pointer; font-weight: 600; }
+.full-row { grid-column: 1 / -1; }
+.result-msg { margin-top: 0.5rem; font-size: 0.88rem; }
+.result-msg.ok  { color: var(--success); }
+.result-msg.err { color: var(--danger);  }
+
+/* Empty state */
+.empty-state { text-align: center; padding: 2rem 0; color: var(--muted); }
+.empty-state .icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+
+/* Toast notification */
+#toast {
+  position: fixed;
+  bottom: 1.5rem;
+  inset-inline-end: 1.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.9rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.2s, transform 0.2s;
+  pointer-events: none;
+  z-index: 200;
+  max-width: 320px;
+}
+#toast.show { opacity: 1; transform: translateY(0); }
+#toast.ok  { border-color: var(--success); color: var(--success); }
+#toast.err { border-color: var(--danger);  color: var(--danger);  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="card">
+  <div class="printers-header">
+    <div>
+      <h2>{{ _('Printers') }}</h2>
+      <p class="status-subtitle">{{ _('Manage CUPS printers. Changes take effect immediately.') }}</p>
+    </div>
+    <button class="btn-primary" onclick="toggleAddForm()">+ {{ _('Add Printer') }}</button>
+  </div>
+</div>
+
+{# ── Add Printer Form ── #}
+<div class="card" id="add-form-wrap">
+  <h3 style="margin-bottom:1rem;">{{ _('Add Printer') }}</h3>
+
+  <div class="type-toggle">
+    <label>
+      <input type="radio" name="ptype" value="network" checked onchange="onTypeChange(this.value)">
+      {{ _('Network (socket)') }}
+    </label>
+    <label>
+      <input type="radio" name="ptype" value="usb" onchange="onTypeChange(this.value)">
+      USB
+    </label>
+  </div>
+
+  <div class="add-form-grid">
+
+    {# Network fields #}
+    <div id="net-fields" class="full-row add-form-grid" style="padding:0;">
+      <div class="field-group">
+        <label class="field-label" for="f-ip">{{ _('Printer IP') }}</label>
+        <input class="field-control" id="f-ip" type="text" placeholder="192.168.1.101"
+               oninput="autoName()" autocomplete="off">
+        <span class="field-help">{{ _('IP address of the network printer') }}</span>
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="f-port">{{ _('Port') }}</label>
+        <input class="field-control" id="f-port" type="number" value="9100" min="1" max="65535"
+               oninput="autoName()">
+      </div>
+    </div>
+
+    {# USB fields #}
+    <div id="usb-fields" class="full-row" style="display:none;">
+      <div class="field-group">
+        <label class="field-label" for="f-uri-usb">{{ _('USB Device') }}</label>
+        <select class="field-control" id="f-uri-usb" onchange="onUsbSelect(this.value)">
+          <option value="">{{ _('Loading…') }}</option>
+        </select>
+        <span class="field-help">{{ _('Detected USB printers') }}</span>
+      </div>
+    </div>
+
+    <div class="field-group full-row">
+      <label class="field-label" for="f-name">{{ _('Printer Name') }}</label>
+      <input class="field-control" id="f-name" type="text" placeholder="socket_192_168_1_101_9100"
+             autocomplete="off" pattern="[a-zA-Z0-9_.\-]+">
+      <span class="field-help">{{ _('Unique identifier (letters, digits, -, _)') }}</span>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label" for="f-desc">{{ _('Description') }} <span style="font-weight:400;color:var(--muted)">({{ _('optional') }})</span></label>
+      <input class="field-control" id="f-desc" type="text" placeholder="{{ _('Cashier Printer') }}">
+    </div>
+
+    <div class="field-group">
+      <label class="field-label" for="f-loc">{{ _('Location') }} <span style="font-weight:400;color:var(--muted)">({{ _('optional') }})</span></label>
+      <input class="field-control" id="f-loc" type="text" placeholder="{{ _('POS Counter') }}">
+    </div>
+
+  </div>
+
+  <div id="add-result" class="result-msg" style="display:none;"></div>
+
+  <div style="display:flex; gap:0.75rem; margin-top:1rem;">
+    <button class="btn-primary"   id="btn-add-submit" onclick="submitAdd()">{{ _('Add Printer') }}</button>
+    <button class="btn-secondary" onclick="toggleAddForm()">{{ _('Cancel') }}</button>
+  </div>
+</div>
+
+{# ── Printer List ── #}
+<div id="printers-list">
+  <div class="card">
+    <div class="empty-state">
+      <div class="icon">⏳</div>
+      <p>{{ _('Loading printers…') }}</p>
+    </div>
+  </div>
+</div>
+
+{# ── Toast ── #}
+<div id="toast"></div>
+
+<script>
+// ── State ────────────────────────────────────────────────────────────────────
+let _printers = [];
+let _addOpen  = false;
+let _ptype    = 'network';
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+loadPrinters();
+
+// ── Toggle add form ───────────────────────────────────────────────────────────
+function toggleAddForm() {
+  _addOpen = !_addOpen;
+  document.getElementById('add-form-wrap').classList.toggle('open', _addOpen);
+  if (_addOpen && _ptype === 'usb') loadUsbDevices();
+  clearAddResult();
+}
+
+// ── Type switch ───────────────────────────────────────────────────────────────
+function onTypeChange(val) {
+  _ptype = val;
+  document.getElementById('net-fields').style.display = val === 'network' ? '' : 'none';
+  document.getElementById('usb-fields').style.display = val === 'usb'     ? '' : 'none';
+  if (val === 'usb') loadUsbDevices();
+  clearAddResult();
+}
+
+// ── Auto-generate name from IP+port ──────────────────────────────────────────
+function autoName() {
+  const ip   = document.getElementById('f-ip').value.trim().replace(/\./g, '_');
+  const port = document.getElementById('f-port').value.trim();
+  if (ip) document.getElementById('f-name').value = `socket_${ip}_${port}`;
+}
+
+function onUsbSelect(uri) {
+  // Generate name from USB URI: usb://Epson/TM_T20II → usb_Epson_TM_T20II
+  const slug = uri.replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+  document.getElementById('f-name').value = slug;
+}
+
+// ── Load USB devices ──────────────────────────────────────────────────────────
+async function loadUsbDevices() {
+  const sel = document.getElementById('f-uri-usb');
+  sel.innerHTML = '<option value="">{{ _("Loading…") }}</option>';
+  try {
+    const r = await fetch('/api/cups/devices');
+    const d = await r.json();
+    const usb = (d.devices || []).filter(dev => dev.uri.startsWith('usb://'));
+    if (!usb.length) {
+      sel.innerHTML = '<option value="">{{ _("No USB printers detected") }}</option>';
+      return;
+    }
+    sel.innerHTML = usb.map(dev =>
+      `<option value="${esc(dev.uri)}">${esc(dev.uri)}</option>`
+    ).join('');
+    onUsbSelect(sel.value);
+  } catch {
+    sel.innerHTML = '<option value="">{{ _("Failed to load devices") }}</option>';
+  }
+}
+
+// ── Submit add ────────────────────────────────────────────────────────────────
+async function submitAdd() {
+  clearAddResult();
+  const name = document.getElementById('f-name').value.trim();
+  let uri;
+  if (_ptype === 'network') {
+    const ip   = document.getElementById('f-ip').value.trim();
+    const port = document.getElementById('f-port').value.trim();
+    if (!ip) { showAddResult('{{ _("IP address is required") }}', false); return; }
+    uri = `socket://${ip}:${port}`;
+  } else {
+    uri = document.getElementById('f-uri-usb').value;
+    if (!uri) { showAddResult('{{ _("Select a USB device") }}', false); return; }
+  }
+  if (!name) { showAddResult('{{ _("Printer name is required") }}', false); return; }
+
+  const btn = document.getElementById('btn-add-submit');
+  btn.disabled = true;
+  btn.textContent = '{{ _("Adding…") }}';
+
+  try {
+    const r = await fetch('/api/cups/printers', {
+      method : 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body   : JSON.stringify({
+        name,
+        uri,
+        description: document.getElementById('f-desc').value.trim(),
+        location   : document.getElementById('f-loc').value.trim(),
+      }),
+    });
+    const d = await r.json();
+    if (d.success) {
+      toast('{{ _("Printer added successfully") }}', true);
+      toggleAddForm();
+      resetAddForm();
+      loadPrinters();
+    } else {
+      showAddResult(d.error || '{{ _("Failed to add printer") }}', false);
+    }
+  } catch (e) {
+    showAddResult('{{ _("Network error") }}', false);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '{{ _("Add Printer") }}';
+  }
+}
+
+function resetAddForm() {
+  document.getElementById('f-ip').value   = '';
+  document.getElementById('f-name').value = '';
+  document.getElementById('f-desc').value = '';
+  document.getElementById('f-loc').value  = '';
+  document.getElementById('f-port').value = '9100';
+}
+
+// ── Load printers ─────────────────────────────────────────────────────────────
+async function loadPrinters() {
+  try {
+    const r = await fetch('/api/cups/printers');
+    const d = await r.json();
+    _printers = d.printers || [];
+    renderPrinters();
+  } catch {
+    document.getElementById('printers-list').innerHTML =
+      `<div class="card"><p class="notice notice-danger">{{ _("Failed to load printers. Is CUPS running?") }}</p></div>`;
+  }
+}
+
+// ── Render printers ───────────────────────────────────────────────────────────
+function renderPrinters() {
+  const wrap = document.getElementById('printers-list');
+  if (!_printers.length) {
+    wrap.innerHTML = `
+      <div class="card">
+        <div class="empty-state">
+          <div class="icon">🖨️</div>
+          <p>{{ _('No printers in CUPS. Click') }} <strong>+ {{ _('Add Printer') }}</strong> {{ _('to add one.') }}</p>
+        </div>
+      </div>`;
+    return;
+  }
+  wrap.innerHTML = _printers.map(p => `
+    <div class="card">
+      <div class="printer-card">
+        <div class="printer-info">
+          <div class="printer-name">${esc(p.name)}</div>
+          ${p.description ? `<div class="printer-meta">${esc(p.description)}${p.location ? ' &bull; ' + esc(p.location) : ''}</div>` : ''}
+          ${p.uri ? `<div class="printer-uri">${esc(p.uri)}</div>` : ''}
+        </div>
+        <div class="printer-actions">
+          <span class="badge badge-${p.status === 'connected' ? 'connected' : 'disconnected'}">
+            ${p.status === 'connected' ? '{{ _("Online") }}' : '{{ _("Offline") }}'}
+          </span>
+          <button class="btn-secondary" onclick="testPrinter('${esc(p.name)}', this)">
+            {{ _('Test Print') }}
+          </button>
+          <button class="btn-secondary" style="color:var(--danger);"
+                  onclick="deletePrinter('${esc(p.name)}', this)">
+            {{ _('Delete') }}
+          </button>
+        </div>
+      </div>
+      <div id="msg-${esc(p.name)}" class="result-msg" style="display:none;"></div>
+    </div>`).join('');
+}
+
+// ── Test printer ──────────────────────────────────────────────────────────────
+async function testPrinter(name, btn) {
+  btn.disabled = true;
+  btn.textContent = '{{ _("Sending…") }}';
+  clearMsg(name);
+  try {
+    const r = await fetch(`/api/cups/printers/${encodeURIComponent(name)}/test`, {method: 'POST'});
+    const d = await r.json();
+    if (d.success) {
+      showMsg(name, d.message || '{{ _("Test job submitted") }}', true);
+    } else {
+      showMsg(name, d.error || '{{ _("Test failed") }}', false);
+    }
+  } catch {
+    showMsg(name, '{{ _("Network error") }}', false);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '{{ _("Test Print") }}';
+  }
+}
+
+// ── Delete printer ────────────────────────────────────────────────────────────
+async function deletePrinter(name, btn) {
+  if (!confirm(`{{ _("Delete printer") }} "${name}"?`)) return;
+  btn.disabled = true;
+  try {
+    const r = await fetch(`/api/cups/printers/${encodeURIComponent(name)}`, {method: 'DELETE'});
+    const d = await r.json();
+    if (d.success) {
+      toast('{{ _("Printer deleted") }}', true);
+      _printers = _printers.filter(p => p.name !== name);
+      renderPrinters();
+    } else {
+      toast(d.error || '{{ _("Delete failed") }}', false);
+      btn.disabled = false;
+    }
+  } catch {
+    toast('{{ _("Network error") }}', false);
+    btn.disabled = false;
+  }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function showMsg(name, msg, ok) {
+  const el = document.getElementById('msg-' + name);
+  if (!el) return;
+  el.textContent = msg;
+  el.className   = 'result-msg ' + (ok ? 'ok' : 'err');
+  el.style.display = '';
+}
+function clearMsg(name) {
+  const el = document.getElementById('msg-' + name);
+  if (el) el.style.display = 'none';
+}
+function showAddResult(msg, ok) {
+  const el = document.getElementById('add-result');
+  el.textContent = msg;
+  el.className   = 'result-msg ' + (ok ? 'ok' : 'err');
+  el.style.display = '';
+}
+function clearAddResult() {
+  const el = document.getElementById('add-result');
+  if (el) el.style.display = 'none';
+}
+
+let _toastTimer;
+function toast(msg, ok) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className   = 'show ' + (ok ? 'ok' : 'err');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { t.className = ''; }, 3000);
+}
+</script>
+{% endblock %}
